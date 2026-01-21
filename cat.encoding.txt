@@ -1,0 +1,73 @@
+# Categorical variables in X-matrix
+# dummy variables encoding vs one-hot encoding
+# dummy variables encoding makes number of levels -1 dummy variables
+# one-hot encoding makes number of levels dummy variables
+# In MLR model with more than one categorical variables, 
+# dummy variables encoding is recommended because of x-matrix inversion
+# example
+
+algae <- read.table('Analysis.txt',
+             header=F,
+             dec='.',
+             col.names=c('season','size','speed','mxPH','mnO2','Cl','NO3',
+             'NH4','oPO4','PO4','Chla','a1','a2','a3','a4','a5','a6','a7'),
+             na.strings=c('XXXXXXX'),
+			 stringsAsFactors=T)
+
+algae <- algae[-c(62,199),]
+row.names(algae)<-1:nrow(algae)
+
+algaex<-algae[,1:11]  #x-matrix
+algaex<-cbind(algaex[,1:3],scale(algaex[,4:11])) #standardize
+clean.algaex<-algaex
+
+## manual imputation using KNN
+
+library(cluster)
+dist.mtx <- as.matrix(daisy(algaex,stand=T))  #distance matrix
+
+# filling function
+central.value <- function(x) {
+  if (is.numeric(x)) mean(x,na.rm=T)
+  else if (is.factor(x)) levels(x)[which.max(table(x))]
+  else {
+    f <- as.factor(x)
+    levels(f)[which.max(table(f))]
+  }
+}
+
+#long code
+for(r in which(!complete.cases(algaex))) clean.algaex[r,which(is.na(algaex[r,]))] <- 
+apply(data.frame(algaex[c(as.integer(names(sort(dist.mtx[r,])[2:11]))), 
+which(is.na(algaex[r,]))]), 2,central.value)
+summary(clean.algaex)
+anyNA(clean.algaex)
+
+
+## automatic imputation using Caret package (KNN)
+install.packages('caret')  ##short for Classification And REgression Training
+install.packages('RANN')
+library(caret)
+library(RANN)
+### A guide for caret package : https://www.machinelearningplus.com/machine-learning/caret-package/
+
+
+imp.model<-preProcess(algaex,method="knnImpute",k=10)
+imp.model
+
+algaex.imp<-predict(imp.model,algaex)
+dummy1<-dummyVars(" ~ .", data=algaex.imp)
+algaex2<-data.frame(predict(dummy1,algaex.imp))
+
+########
+algae1<-cbind(algae$a1,clean.algaex)
+names(algae1)[1]<-"a1"
+algae2<-cbind(algae$a1,algaex2)
+names(algae2)[1]<-"a1"
+
+lm1<-lm(a1~., data=algae1)
+lm2<-lm(a1~., data=algae2)
+summary(lm1)
+summary(lm2)
+
+

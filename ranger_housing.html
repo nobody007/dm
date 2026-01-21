@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>한글 텍스트 파일</title>
+</head>
+<body>
+<pre>
+install.packages('rsample')
+install.packages('randomForest')
+install.packages('ranger')
+install.packages('caret')
+install.packages('AmesHousing')
+
+
+library(rsample)      # data splitting 
+library(randomForest) # basic implementation
+library(ranger)       # a faster implementation of randomForest
+library(caret)  
+library(AmesHousing)
+
+set.seed(123)
+ames_split <- initial_split(AmesHousing::make_ames(), prop = .7)
+ames_train <- training(ames_split)
+ames_test  <- testing(ames_split)
+
+#dataframe으로 변환해서 사용하고 싶을때
+ames_train<-as.data.frame(ames_train)
+ames_test<-as.data.frame(ames_test)
+
+rg1<-ranger(Sale_Price~., data=ames_train)
+rg1
+
+
+### number of trees vs oob error plot
+### ranger에서는 트리수를 변경해가면서 직접 oob error를 저장해야함
+num_trees <- seq(10, 500, by=10)  # 10에서 500까지 10 단위로 트리 개수 설정
+oob_errors <- numeric(length(num_trees))  # 각 트리 개수에 대한 OOB 에러 저장
+
+for (i in seq_along(num_trees)) {
+	model <- ranger(Sale_Price ~ ., data = ames_train, 
+				num.trees = num_trees[i], oob.error = TRUE)
+	oob_errors[i] <- model$prediction.error  # 모델의 OOB 에러를 저장
+}
+
+error_df <- data.frame(
+  num_trees = num_trees,
+  oob_error = oob_errors
+)
+
+error_df
+
+ggplot(error_df, aes(x = num_trees, y = oob_error)) +
+  geom_line() +
+  labs(
+    title = "Number of Trees vs OOB Error",
+    x = "Number of Trees",
+    y = "OOB Error"
+  ) +
+  theme_minimal()
+
+## VIP  
+rg1<-ranger(Sale_Price~., data=ames_train, importance="impurity")
+ 
+# 변수 중요도 추출
+importance_values <- rg1$variable.importance
+
+# 데이터 프레임으로 변환
+importance_df <- data.frame(
+  variable = names(importance_values),
+  importance = importance_values
+)
+
+# 중요도 순서로 정렬
+importance_df <- importance_df[order(importance_df$importance, decreasing = TRUE), ]
+
+
+# 변수 중요도 플롯 생성
+ggplot(importance_df, aes(x = reorder(variable, importance), y = importance)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Variable Importance Plot",
+    x = "Variables",
+    y = "Importance"
+  ) +
+  theme_minimal()
+
+imp1<-importance_df[1:25,]
+ggplot(imp1, aes(x = reorder(variable, importance), y = importance)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(
+    title = "Variable Importance Plot",
+    x = "Variables",
+    y = "Importance"
+  ) +
+  theme_minimal()
+
+#now partial dependence plot
+install.packages('pdp')
+library(pdp)
+
+partial(rg1, "Overall_Qual", plot=T)
+partial(rg1, "Garage_Cars", plot=T)
+</pre>
+
+</body>
+</html>
+
+
+
+

@@ -1,0 +1,68 @@
+algae <- read.table('Analysis.txt',
+             header=F,
+             dec='.',
+            col.names=c('season','size','speed','mxPH','mnO2','Cl','NO3',
+             'NH4','oPO4','PO4','Chla','a1','a2','a3','a4','a5','a6','a7'),
+             na.strings=c('XXXXXXX'))
+algae <- algae[-c(62,199),]
+algae$season<-as.factor(algae$season)
+algae$speed<-as.factor(algae$speed)
+algae$size<-as.factor(algae$size)
+
+algae.x<-myimputation(algae[,1:11],10)
+
+algae1<-cbind(algae.x,algae$a1)
+names(algae1)[12]<-"a1"
+names(algae1)
+
+#앞으로 모델링은 algae1 데이터를 이용 (We will use algae data for the analysis)
+#이제 모델링 가능 (Now we can fit regression models)
+# Linear model ; muliple linear regression 다중회귀모형
+lm1<-lm(a1~., data=algae1)
+#stepwise regression
+lm1.final<-step(lm1,direction="both")
+
+#tree model fitting
+tr1<-tree(a1~., data=algae1)
+
+#optimal tree search
+tr1.cv<-cv.tree(tr1)
+for (i in 2:10){
+	tr1.cv$dev<-tr1.cv$dev+cv.tree(tr1)$dev
+}
+tr1.cv$dev<-tr1.cv$dev/10
+plot(tr1.cv)
+tr1.final<-prune.tree(tr1,best=3)
+plot(tr1.final);text(tr1.final)
+
+#compute prediction error in a training set
+#최종모형은 lm1.final 과 tr1.final 에 저장되어 있음
+#The final models are saved in lm1.final and tr1.final
+#Regression에서는 MSE 또는 RMSE가 가장 많이 사용되는 measure
+#RMSE or MSE is most frequently used performance measure in regression
+#예측값 계산 (predicted value computation)
+
+lm1.final.pred<-predict(lm1.final,algae1)
+tr1.final.pred<-predict(tr1.final,algae1)
+
+#MSE
+lm1.mse<-mean((algae1$a1-lm1.final.pred)^2)
+tr1.mse<-mean((algae1$a1-tr1.final.pred)^2)
+
+#NMSE
+# MSE/mean((y-ybar)^2)
+mse.den<-mean((algae$a1-mean(algae$a1))^2)
+
+lm1.nmse<-lm1.mse/mse.den
+tr1.nmse<-tr1.mse/mse.den
+
+lm1.nmse
+tr1.nmse
+
+
+
+
+
+
+
+

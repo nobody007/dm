@@ -1,0 +1,26 @@
+library(tree)
+tr1<-tree(a1~.,data=algae[,1:12])
+#get cv value
+tr1.cv<-cv.tree(tr1)
+
+#do this 10 times total since 10 partitions are random
+#it doesn't need to be 10 times. just do enough times.
+
+for (i in 2:10){
+	tr1.cv$dev<-tr1.cv$dev+cv.tree(tr1)$dev
+}
+
+tr1.cv$dev<-tr1.cv$dev/10
+
+plot(tr1.cv)
+
+##find the best size
+##get the size with min deviance
+
+final.tr<-prune.tree(tr1,best=4)
+
+final.tr
+
+plot(final.tr)
+text(final.tr)
+

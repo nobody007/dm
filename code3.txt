@@ -1,0 +1,697 @@
+# ######################################################################
+# CHAPTER - STOCKS
+# ----------------------------------------------------------------------
+
+# ======================================================================
+# Section 'The available data'
+
+stocks <- read.csv('stocks.txt',
+    col.names=c('Date','Open','High','Low','Close',
+                'Volume','Ticker','X'),
+    quote = "'",
+    as.is=c(1:6),
+    comment.char='#',
+    header=T)
+stocks <- stocks[,1:7]
+ibm <- stocks[stocks$Ticker=='IBM', 1:6]
+ibm$Date <- substr(ibm$Date,1,10)
+
+rm(stocks)
+
+
+use stocks;
+source stocks_db.sql;
+
+show tables;
+select * from quotes where Ticker='IBM';
+
+library(RODBC)
+ch <- odbcConnect("stocksDSN",uid="myuser",pwd="mypassword")
+stocks <- sqlQuery(ch,"select * from quotes")
+odbcClose(ch)
+ibm <- stocks[stocks$Ticker=='IBM',1:6]
+ibm$Date <- substr(ibm$Date,1,10)
+
+library(RODBC)
+ch <- odbcConnect("stocksDSN",uid="myuser",pwd="mypassword")
+ibm <- sqlQuery(ch,"select Date, Open, High, Low, Close, Volume from quotes where Ticker='IBM'")
+odbcClose(ch)
+ibm$Date <- substr(ibm$Date,1,10)
+
+
+library(RMySQL)
+ch <- dbConnect(MySQL(),dbname="stocks",
+                user="myuser",password="mypassword")
+ibm <- quickSQL(ch,"select Date, Open, High, Low, Close, Volume from quotes where Ticker='IBM'")
+close(ch)
+ibm$Date <- substr(ibm$Date,1,10)
+
+
+library(RMySQL)
+library(DBI)
+drv <- dbDriver("MySQL")
+ch <- dbConnect(drv, dbname="stocks", user="myuser", password="mypassword")
+ibm <- dbGetQuery(ch,"select Date, Open, High, Low, Close, Volume from quotes where Ticker='IBM'")
+dbDisconnect(ch)
+dbUnloadDriver(drv)
+
+
+library(tseries)
+t.ibm <- get.hist.quote("IBM",start="1970-01-02",end="2002-05-17",quote=c("Open", "High", "Low", "Close","Volume"))
+
+plot(t.ibm[,c('Close','Volume')],main="IBM stock")
+
+ts(rnorm(25), frequency = 4, start = c(1959, 2))
+
+ts(rnorm(25), frequency = 12, start = c(1959, 2))
+
+plot(as.ts(ibm[,c('Close','Volume')]),main="IBM stock")
+
+# ----------------------------------------------------------------------
+# "df.get.hist.quote()" function
+#
+# Based on code by A. Trapletti (package tseries)
+#
+# The main difference is that this function produces a data frame with
+# a column containing the dates of the quotes, instead of a time series
+# object.
+df.get.hist.quote <- function (instrument = "ibm",
+                               start, end,
+                               quote = c("Open","High", "Low", "Close","Volume"),
+                               provider = "yahoo", method = "auto") 
+{
+    if (missing(start)) 
+        start <- "1970-01-02"
+    if (missing(end)) 
+        end <- format(Sys.time() - 86400, "%Y-%m-%d")
+    provider <- match.arg(provider)
+    start <- as.POSIXct(start, tz = "GMT")
+    end <- as.POSIXct(end, tz = "GMT")
+    if (provider == "yahoo") {
+        url <- paste("http://chart.yahoo.com/table.csv?s=", instrument, 
+            format(start, "&a=%m&b=%d&c=%Y"), format(end, "&d=%m&e=%d&f=%Y"), 
+            "&g=d&q=q&y=0&z=", instrument, "&x=.csv", sep = "")
+        destfile <- tempfile()
+        status <- download.file(url, destfile, method = method)
+        if (status != 0) {
+            unlink(destfile)
+            stop(paste("download error, status", status))
+        }
+        status <- scan(destfile, "", n = 1, sep = "\n", quiet = TRUE)
+        if (substring(status, 1, 2) == "No") {
+            unlink(destfile)
+            stop(paste("No data available for", instrument))
+        }
+        x <- read.table(destfile, header = TRUE, sep = ",")
+        unlink(destfile)
+        nser <- pmatch(quote, names(x))
+        if (any(is.na(nser))) 
+            stop("This quote is not available")
+        n <- nrow(x)
+        lct <- Sys.getlocale("LC_TIME")
+        Sys.setlocale("LC_TIME", "C")
+        on.exit(Sys.setlocale("LC_TIME", lct))
+        dat <- gsub(" ", "0", as.character(x[, 1]))
+        dat <- as.POSIXct(strptime(dat, "%d-%b-%y"), tz = "GMT")
+        if (dat[n] != start) 
+            cat(format(dat[n], "time series starts %Y-%m-%d+\n"))
+        if (dat[1] != end) 
+            cat(format(dat[1], "time series ends   %Y-%m-%d\n"))
+#        x[,1] <- format(dat,"%Y-%m-%d")
+        return(data.frame(cbind(Date=I(format(dat[n:1],"%Y-%m-%d")),x[n:1,nser]),row.names=1:n))
+      }
+    else stop("provider not implemented")
+}
+
+
+
+rm(t.ibm)
+ibm <- df.get.hist.quote("IBM",start="1970-01-02",end="2002-05-17")
+ibm[c(1,nrow(ibm)),]
+
+
+# ======================================================================
+# Section 'Time series prediction'
+
+
+h.returns <- function(x,h=1) {
+  diff(x,lag=h)/x[1:(length(x)-h)]
+  }
+h.returns(c(45,23,4,56,-45,3),h=2)
+
+
+library(ts)
+embed(c(45,677,34,2,-76,-23,0,45,-3445),dim=3)
+
+
+embeded.dataset <- function(data,quote='Close',hday=1,emb=10) {
+   ds <- data.frame(embed(h.returns(data[,quote],h=hday),emb+hday))
+   ds <- ds[,c(1,(1+hday):(hday+emb))]
+   names(ds) <- c(paste('r',hday,'.f',hday,sep=""),
+                  paste('r',hday,'.t',0:(emb-1),sep=""))
+   ds$Date <- data[(hday+emb):(nrow(data)-hday),'Date']
+   ds
+   }
+ibm.data <- embeded.dataset(ibm,hday=1)
+names(ibm.data)
+ibm.data[1:2,]
+
+
+boxplot(ibm.data$r1.f1,boxwex=0.15,ylab='1-day returns of Closing price')
+rug(jitter(ibm.data$r1.f1),side=2)
+
+acf(ibm.data$r1.f1,main='',ylim=c(-0.1,0.1))
+
+ibm.data <- embeded.dataset(ibm,hday=1,emb=24)
+
+ibm.train <- ibm.data[ibm.data$Date < '1990-01-01',]
+ibm.test <- ibm.data[ibm.data$Date > '1989-12-31',]
+
+# s.train <- scale(ibm.train[,-ncol(ibm.train)])
+# s.test <- scale(ibm.test[,-ncol(ibm.test)])
+
+library(nnet)
+nn <- nnet(r1.f1 ~ .,data=ibm.train[,-ncol(ibm.train)],linout=T,size=10,decay=0.01,maxit=1000)
+
+summary(nn)
+
+nn.preds <- predict(nn,ibm.test)
+# true.nn.preds <- (attr(s.test,"scaled:scale")[1]*nn.preds)+attr(s.test,"scaled:center")[1]
+
+
+# New version of predictions - sliding window approach
+sliding.window.preds <- function(form, data, model, model.pars, train.window, fst.test, age.window) {
+  n <- nrow(data)
+  preds <- vector()
+  while (fst.test <= n) {
+    cat('Training from ',fst.test-train.window,' till ',fst.test-1,'\n')
+    model.pars$data <- data[fst.test-train.window:(fst.test-1),]
+    m <- do.call(model,model.pars)
+    cat('Testing from ',fst.test,' till ',min(n,(fst.test+age.window-1)),'\n')
+    preds <- c(preds,predict(m,data[fst.test:min(n,(fst.test+age.window-1)),]))
+    fst.test <- fst.test+age.window
+  }
+  preds
+}
+# End of extras
+
+
+plot(ibm.test[,1],nn.preds,ylim=c(-0.01,0.01),main='Neural Net Results',xlab='True',ylab='NN predictions')
+abline(h=0,v=0);abline(0,1,lty=2)
+
+
+library(modreg)
+pp <- ppr(r1.f1 ~ ., data=ibm.train[,-ncol(ibm.train)],nterms=5)
+pp.preds <- predict(pp,ibm.test)
+
+summary(pp)
+
+
+library(mda)
+m <- mars(ibm.train[,2:10],ibm.train[,1])
+m.preds <- predict(m,ibm.test[,2:10])
+
+
+naive.returns <- c(ibm.train[nrow(ibm.train),1],ibm.test[1:(nrow(ibm.test)-1),1])
+theil <- function(preds,naive,true) {
+  sqrt(sum((true-preds)^2))/sqrt(sum((true-naive)^2))
+}
+theil(nn.preds,naive.returns,ibm.test[,1])
+
+
+hit.rate <- function(preds,true) {
+  length(which(preds*true > 0))/length(which(true != 0))
+}
+positive.hit.rate <- function(preds,true) {
+  length(which(preds > 0 & true > 0))/length(which(true > 0))
+}
+negative.hit.rate <- function(preds,true) {
+  length(which(preds < 0 & true < 0))/length(which(true < 0))
+}
+hit.rate(nn.preds,ibm.test[,1])
+positive.hit.rate(nn.preds,ibm.test[,1])
+negative.hit.rate(nn.preds,ibm.test[,1])
+
+
+timeseries.eval <- function(preds,naive,true) {
+   th <- sqrt(sum((true-preds)^2))/sqrt(sum((true-naive)^2))
+   hr <- length(which(preds*true > 0))/length(which(true != 0))
+   pr <- length(which(preds > 0 & true > 0))/length(which(true > 0))
+   nr <- length(which(preds < 0 & true < 0))/length(which(true < 0))
+   n.sigs <- length(which(preds != 0))
+   perc.up <- length(which(preds > 0)) / n.sigs
+   perc.down <- length(which(preds < 0)) / n.sigs
+   round(data.frame(N=length(true),Theil=th,HitRate=hr,PosRate=pr,NegRate=nr,
+                    Perc.Up=perc.up,Perc.Down=perc.down),
+         3)
+ }
+timeseries.eval(nn.preds,naive.returns,ibm.test[,1])
+
+
+annualized.timeseries.eval <- function(preds,naive,test) {
+  res <- timeseries.eval(preds,naive,test[,1])
+
+  years <- unique(substr(test[,'Date'],1,4))
+  for(y in years) {
+    idx <- which(substr(test[,'Date'],1,4)==y)
+    res <- rbind(res,timeseries.eval(preds[idx],naive[idx],test[idx,1]))
+  }
+  
+  row.names(res) <- c('avg',years)
+  res
+}
+annualized.timeseries.eval(nn.preds,naive.returns,ibm.test)
+
+
+first12y <- nrow(ibm.data[ibm.data$Date < '1982-01-01',])
+train <- ibm.train[1:first12y,]
+select <- ibm.train[(first12y+1):nrow(ibm.train),]
+
+
+res <- expand.grid(Size=c(5,10,15,20),
+                   Decay=c(0.01,0.05,0.1),
+                   MSE=0,
+                   Hit.Rate=0)
+for(i in 1:12) {
+  nn <- nnet(r1.f1 ~ .,data=train[,-ncol(train)],linout=T,size=res[i,'Size'],decay=res[i,'Decay'],maxit=1000)
+  nn.preds <- predict(nn,select)
+  
+  res[i,'MSE'] <- mean((nn.preds-select[,1])^2)
+  res[i,'Hit.Rate'] <- hit.rate(nn.preds,select[,1])
+}
+
+
+res
+
+
+nn <- nnet(r1.f1 ~ .,data=train[,-ncol(train)],linout=T,size=20,decay=0.1,maxit=1000)
+nn.preds <- predict(nn,select)
+pp <- ppr(r1.f1 ~ ., data=train[,-ncol(train)],nterms=5)
+pp.preds <- predict(pp,select)
+m <- mars(train[,2:20],train[,1])
+m.preds <- predict(m,select[,2:20])
+naive.returns <- c(train[first12y,1],select[1:(nrow(select)-1),1])
+
+
+annualized.timeseries.eval(nn.preds,naive.returns,select)
+annualized.timeseries.eval(pp.preds,naive.returns,select)
+annualized.timeseries.eval(m.preds,naive.returns,select)
+
+
+# ======================================================================
+# Section 'From prediction into trading actions'
+
+buy.signals <- function(pred.ret,buy=0.05,sell=-0.05) {
+  sig <- ifelse(pred.ret < sell,"sell",ifelse(pred.ret > buy,"buy","hold"))
+  factor(sig,levels=c('sell','hold','buy'))
+}
+
+
+mars.actions <- buy.signals(m.preds,buy=0.01,sell=-0.01)
+market.moves <- buy.signals(select[,1],buy=0.01,sell=-0.01)
+table(mars.actions,market.moves)
+
+
+signals.eval <- function(pred.sig,true.sig,true.ret) {
+  t <- table(pred.sig,true.sig)
+  n.buy <- sum(t['buy',])
+  n.sell <- sum(t['sell',])
+  n.sign <- n.buy+n.sell
+  hit.buy <- round(100*t['buy','buy']/n.buy,2)
+  hit.sell <- round(100*t['sell','sell']/n.sell,2)
+  hit.rate <- round(100*(t['sell','sell']+t['buy','buy'])/n.sign,2)
+  ret.buy <- round(100*mean(as.vector(true.ret[which(pred.sig=='buy')])),4)
+  ret.sell <- round(100*mean(as.vector(true.ret[which(pred.sig=='sell')])),4)
+  data.frame(n.sess=sum(t),acc=hit.rate,acc.buy=hit.buy,acc.sell=hit.sell,n.buy=n.buy,n.sell=n.sell,ret.buy=ret.buy,ret.sell=ret.sell)
+}
+annualized.signals.results <- function(pred.sig,test) {
+  true.signals <- buy.signals(test[,1],buy=0,sell=0)
+
+  res <- signals.eval(pred.sig,true.signals,test[,1])
+
+  years <- unique(substr(test[,'Date'],1,4))
+  for(y in years) {
+    idx <- which(substr(test[,'Date'],1,4)==y)
+    res <- rbind(res,signals.eval(pred.sig[idx],true.signals[idx],test[idx,1]))
+  }
+  row.names(res) <- c('avg',years)
+  res
+}
+annualized.signals.results(mars.actions,select)
+
+annualized.signals.results(buy.signals(pp.preds,buy=0.01,sell=-0.01),select)
+annualized.signals.results(buy.signals(nn.preds,buy=0.01,sell=-0.01),select)
+
+
+# ----------------------------------------------------------------------
+# The artificial trader function
+#
+trader.eval <- function(market,signals,
+                   bet=0.2, exp.prof=0.03, hold.time=10,
+                   trans.cost=5, init.cap=10000) {
+  N.days <- nrow(market)
+  res <- list()
+  res$trading <- data.frame(Date=market$Date,
+                            Close=market$Close,
+                            Money=c(init.cap,rep(0.0,N.days-1)),
+                            N.Stocks=rep(0.0,N.days),
+                            Equity=c(init.cap,rep(0.0,N.days-1))
+                            )
+  
+  # The number of trades during the period
+  res$N.trades <- length(which(signals=='buy'))
+  res$Max.P <- res$Max.L <- res$N.obj <- res$Perc.profitable <- res$N.profit <- 0
+  sum.p <- sum.l <- sum.pl <- ssum.pl  <- 0
+
+  for(d in 1:(N.days-1)) {
+    res$trading[d+1,'Money'] <- res$trading[d+1,'Money']+res$trading[d,'Money']
+    res$trading[d+1,'N.Stocks'] <- res$trading[d+1,'N.Stocks']+res$trading[d,'N.Stocks']
+    
+    # Signal to post a buy order at the end of the day...(but only if enough money!)
+    if (signals[d]=='buy' &
+        (N.stocks <- as.integer(bet*res$trading[d,'Equity'] / market[d+1,'Open'])) > 0) {
+      
+      res$trading[d+1,'N.Stocks'] <- res$trading[d+1,'N.Stocks'] + N.stocks
+      res$trading[d+1,'Money'] <- res$trading[d+1,'Money'] -
+        N.stocks*market[d+1,'Open'] - trans.cost
+
+      # The maximum reached every day of the holding period
+      DailyMax.Hold <- as.vector(market[(d+1):min(d+hold.time,N.days),'High'])
+      
+      # Did we reach the wanted profit within the holding period ?
+      Reach.ExpProf <- market[d,'Close']*(1+exp.prof) < DailyMax.Hold
+      if (any(Reach.ExpProf)) {
+        # Yes, we did :-). Sell, at wanted profit
+        sell.price <- market[d,'Close']*(1+exp.prof)
+        sell.day <- d+(which(Reach.ExpProf)[1])
+        res$N.obj <- res$N.obj + 1
+      } else {
+        # No, we did not :-(. Sell, at the close of end of holding
+        sell.price <- market[min(d+hold.time,N.days),'Close']
+        sell.day <- min(d+hold.time,N.days)
+      }
+      
+      # The result of the trade...
+      trade.res <- 100*((N.stocks*sell.price-2*trans.cost)/(market[d+1,'Open']*N.stocks)-1)
+      if (trade.res > 0) {
+        res$N.profit <- res$N.profit + 1
+        if (trade.res > res$Max.P) res$Max.P <- trade.res
+        sum.p <- sum.p+trade.res
+      } else {
+        if (abs(trade.res) > res$Max.L) res$Max.L <- abs(trade.res)
+        sum.l <- sum.l + abs(trade.res)
+      }
+      sum.pl <- sum.pl + trade.res
+
+      # Update the money available in the selling day
+      res$trading[sell.day,'Money'] <- res$trading[sell.day,'Money'] + sell.price * N.stocks - trans.cost
+      # Update the number of stocks available in the selling day
+      res$trading[sell.day,'N.Stocks'] <- res$trading[sell.day,'N.Stocks'] - N.stocks
+        
+    }
+
+    # The capital available at the end of the next day...
+    res$trading[d+1,'Equity'] <- res$trading[d+1,'Money'] +
+      res$trading[d+1,'N.Stocks']*market[d+1,'Close']
+
+  }
+  
+  # Percentage of profitable trades
+  res$Perc.profitable <- 100*res$N.profit/res$N.trades
+  
+  # The profit/loss for the trading period
+  res$PL <- res$trading[N.days,'Equity']-init.cap
+  
+  # The maximum drawdown (sucessive losses) experienced
+  res$Max.DrawDown <- max(cummax(res$trading[,'Equity'])-res$trading[,'Equity'])
+  
+  # The average Profit/Loss per profitable/unprofitable trade
+  res$Avg.profit <- sum.p/res$N.profit
+  res$Avg.loss <- sum.l/(res$N.trades-res$N.profit)
+  res$Avg.PL <- sum.pl/res$N.trades
+  
+  # The Sharpe ratio
+  res$Sharpe.Ratio <- mean(h.returns(res$trading[,'Equity']))/sd(h.returns(res$trading[,'Equity']))
+
+  res
+}
+
+
+market <- ibm[ibm$Date > '1981-12-31' & ibm$Date < '1990-01-01',]
+t <- trader.eval(market,mars.actions)
+names(t)
+
+plot(ts(t$trading[,c(2,4,5)]),main='MARS Trading Results')
+
+
+
+annualized.trading.results <- function(market,signals,...) {
+  res <- data.frame(trader.eval(market,signals,...)[-1])
+  years <- unique(substr(market[,'Date'],1,4))
+  for(y in years) {
+    idx <- which(substr(market[,'Date'],1,4)==y)
+    res <- rbind(res,data.frame(trader.eval(market[idx,],signals[idx],...)[-1]))
+  }
+  row.names(res) <- c('avg',years)
+  round(res,3)
+}
+
+annualized.trading.results(market,mars.actions)
+
+annualized.trading.results(market,mars.actions,bet=0.1,exp.prof=0.02,hold.time=15)
+
+
+# ======================================================================
+# Section 'Going back to model construction'
+
+ma <- function(x,lag) {
+  require('ts')
+  c(rep(NA,lag),apply(embed(x,lag+1),1,mean))
+}
+
+
+ma20.close <- ma(ibm$Close,lag=20)
+
+
+plot(ibm$Close[1:1000],main='Close Price and some moving averages',type='l',ylab='Value',xlab='Day')
+lines(ma(ibm$Close[1:1000],lag=100),col='blue',lty=2)
+lines(ma(ibm$Close[1:1000],lag=200),col='red',lty=3)
+legend(1.18, 22.28, c("Close", "MA(100)", "MA(200)"), col = c('black','blue','red'),lty = c(1,2,3),bty='n')
+
+
+ma.indicator <- function(x,ma.lag=20) {
+  d <- diff(sign(x-c(rep(NA,ma.lag-1),apply(embed(x,ma.lag),1,mean))))
+  factor(c(rep(0,ma.lag),d[!is.na(d)]),levels=c(-2,0,2),labels=c('sell','hold','buy'))
+}
+
+
+trading.actions <- data.frame(Date=ibm$Date[1:1000],Signal=ma.indicator(ibm$Close[1:1000]))
+trading.actions[which(trading.actions$Signal=='buy'),][1:10,]
+
+ma30.actions <- data.frame(Date=ibm[ibm$Date < '1990-01-01','Date'],Signal=ma.indicator(ibm[ibm$Date < '1990-01-01','Close'],ma.lag=30))
+ma30.actions <- ma30.actions[ma30.actions$Date > '1981-12-31','Signal']
+annualized.trading.results(market,ma30.actions)
+
+ema <- function (x, beta = 0.3, init = x[1]) 
+{
+  require('ts')
+  filter(beta*x, filter=1-beta, method="recursive", init=init) 
+} 
+
+
+plot(ibm$Close[1:1000],main='Moving average Vs. Exponential moving average',type='l',ylab='Value',xlab='Day')
+lines(ma(ibm$Close[1:1000],lag=100),col='blue',lty=3)
+lines(ema(ibm$Close[1:1000],beta=0.0198),col='red',lty=2)
+legend(1.18, 22.28, c("Close", "MA(100)", "EMA(0.0198)"), col = c('black','blue','red'),lty = c(1,3,2),bty='n')
+
+
+macd <- function(x,long=26,short=12) {
+  ema(x,lambda=1/(long+1))-ema(x,lambda=1/(short+1))
+}
+
+
+macd.indicator <- function(x,long=26,short=12,signal=9) {
+  v <- macd(x,long,short)
+  d <- diff(sign(v-ema(v,lambda=1/(signal+1))))
+  factor(c(0,0,d[-1]),levels=c(-2,0,2),labels=c('sell','hold','buy'))
+}
+
+
+moving.function <- function(x, lag, FUN, ...) {
+  require('ts')
+  FUN <- match.fun(FUN)
+  c(rep(NA,lag),apply(embed(x,lag+1),1,FUN,...))
+}
+rsi.aux <- function(diffs,lag) {
+  u <- length(which(diffs > 0))/lag
+  d <- length(which(diffs < 0))/lag
+  ifelse(d==0,100,100-(100/(1 + u/d)))
+}
+rsi <- function(x,lag=20) {
+  d <- c(0,diff(x))
+  moving.function(d,lag,rsi.aux,lag)
+}
+
+
+rsi.indicator <- function(x,lag=20) {
+  r <- rsi(x,lag)
+  d <- diff(ifelse(r > 70,3,ifelse(r<30,2,1)))
+  f <- cut(c(rep(0,lag),d[!is.na(d)]),breaks=c(-3,-2,-1,10),labels=c('sell','buy','hold'),right=T)
+  factor(f,levels=c('sell','hold','buy'))
+}
+
+
+
+ad.line <- function(df) {
+  df$Volume*((df$Close-df$Low) - (df$High-df$Close))/(df$High-df$Low)
+}
+chaikin.oscillator <- function(df,short=3,long=10) {
+  ad <- ad.line(df)
+  ema(ad,beta=1/(short+1))-ema(ad,beta=1/(long+1))
+}
+
+
+chaikin <- chaikin.oscillator(ibm[1:first12y,])
+
+
+d5.returns <- h.returns(ibm[,'Close'],h=5)
+var.20d <- moving.function(ibm[,'Close'],20,sd)
+dif.returns <- diff(h.returns(ibm[,'Close'],h=1))
+
+
+
+moving.function <- function(x, lag, FUN, ...) {
+  require('ts')
+  FUN <- match.fun(FUN)
+  c(rep(NA,lag),apply(embed(x,lag+1),1,FUN,...))
+}
+
+#
+moving.function2 <- function(x, lag, FUN, ...) 
+{ 
+        FUN=match.fun(FUN) 
+        n <- length(x) - lag 
+        y <- numeric(n) 
+        for (i in 1:n) { 
+                y[i] <- FUN(x[i:(i + lag)],...) 
+        } 
+        return(y) 
+}
+
+
+
+
+moving.function3 <- function(x, lag, FUN, ...) 
+{ 
+    n <- length(x) 
+    A <- rep(x, length=lag*(n+1)) 
+    dim(A) <- c(n+1, lag) 
+    c(rep(NA,lag-1),sapply(split(A, row(A)), FUN, ...)[1:(n-lag+1)] )
+    # verificar os lags....
+} 
+
+# ----------------------------------------------------------------------
+# Exponential moving average
+# Lower values mean more smoothing... (1 is the series, no smoothing)
+ewma <- function (x, lambda = 0.3, init = x[1]) 
+{
+  require('ts')
+  filter(lambda*x, filter=1-lambda, method="recursive", init=init) 
+} 
+
+# ======================================================================
+# Moving Average indicator
+# If X goes above MA then Buy; if it goes below Sell
+ma.indicator <- function(x,ma.lag=20) {
+  d <- diff(sign(x-c(rep(NA,ma.lag-1),apply(embed(x,ma.lag),1,mean))))
+  factor(c(rep(0,ma.lag),d[!is.na(d)]),levels=c(-2,0,2),labels=c('sell','hold','buy'))
+}
+
+
+# ======================================================================
+# Moving Average Convergence Divergence
+# If X goes above MA then Buy; if it goes below Sell
+macd <- function(x,long=26,short=12) {
+  ewma(x,lambda=1/(long+1))-ewma(x,lambda=1/(short+1))
+}
+
+
+macd.indicator <- function(x,long=26,short=12,signal=9) {
+  v <- macd(x,long,short)
+  d <- diff(sign(v-ewma(v,lambda=1/(signal+1))))
+  factor(c(0,0,d[-1]),levels=c(-2,0,2),labels=c('sell','hold','buy'))
+}
+
+
+# ======================================================================
+# Relative Strength Index
+rsi <- function(x,lag=20) {
+  d <- c(0,diff(x))
+  moving.function(d,lag,rsi.aux,lag)
+}
+
+rsi.aux <- function(diffs,lag) {
+  u <- length(which(diffs > 0))/lag
+  d <- length(which(diffs < 0))/lag
+  ifelse(d==0,100,100-(100/(1 + u/d)))
+}
+
+
+rsi.indicator <- function(x,lag=20) {
+  r <- rsi(x,lag)
+  d <- diff(ifelse(r > 70,3,ifelse(r<30,2,1)))
+  f <- cut(c(rep(0,lag),d[!is.na(d)]),breaks=c(-3,-2,-1,10),labels=c('sell','buy','hold'),right=T)
+  factor(f,levels=c('sell','hold','buy'))
+}
+
+
+# ======================================================================
+# Acumulation/Distribution Line
+ad.line <- function(df) {
+  df$Volume*((df$Close-df$Low) - (df$High-df$Close))/(df$High-df$Low)
+}
+
+# ======================================================================
+# Chaikin Oscillator
+chaikin.oscillator <- function(df,short=3,long=10) {
+  ad <- ad.line(df)
+  ewma(ad,lambda=1/(short+1))-ewma(ad,lambda=1/(long+1))
+}
+
+
+
+# ======================================================================
+# new stuff...
+cols <- 2:6
+i <- stocks[stocks$Ticker=="IBM",]
+dat <- as.POSIXct(strptime(i$Date,"%Y-%m-%d"))
+# jdat <- julian(dat) + 1
+jdat <- julian(dat, origin = as.POSIXct("1960-01-01"))+1
+y <- matrix(NA, nr = max(jdat)-min(jdat)+1,nc=length(cols))
+y[jdat-min(jdat)+1,] <- as.matrix(i[,cols])
+colnames(y) <- names(i)[cols]
+ibm <- ts(y, start = jdat[1], end = jdat[nrow(i)])
+
+
+line2date <- function(ts,line) {
+  require('date')
+  require('tseries')
+  as.date(start(ts)+line-1)
+}
+
+date2line <- function(ts,date) {
+  require('tseries')
+  as.integer(julian(as.POSIXct(date), origin = as.POSIXct("1960-01-01"))-start(ts)+2)
+}
+
+
+
+time.window <- function(df,start,end,cols=names(df)) {
+  if (missing(start)) 
+    start <- df[1,'Date']
+  if (missing(end)) 
+    end <- df[nrow(df),'Date']
+  nser <- pmatch(cols, names(df))
+  df[df$Date >= start & df$Date <= end,nser]
+}
+

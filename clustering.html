@@ -1,0 +1,58 @@
+<html>
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=euc-kr">
+<title>Clustering</title>
+<meta name="generator" content="Namo WebEditor">
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="purple" alink="red">
+<p>Clustering</p>
+<p>&nbsp;</p>
+<ul>
+    <li>Goal : Group a collection of objects into clusters, such that those within each cluster are more closely related to one another than objects assigned to different clusters.</li>
+</ul>
+<ul>
+    <li>There is no information about the class in data. There is no reponse variable (label information)</li>
+</ul>
+<ul>
+    <li>Popular clustering algorithms</li>
+</ul>
+<ul>
+    <ul>
+        <li>k-means</li>
+    </ul>
+    <ul>
+        <p>Uses squared Euclidean distance as a dissimilarity measure.</p>
+        <p>All Varibales must be quantitative (numeric)</p>
+    </ul>
+    <ol>
+        <p>Objective function : Try to minimize the total within scatter (sum of within sum of squares)</p>
+        <p>The results depend on the initial values : Try to run the algorithm several times with random initial values to achieve global minima.</p>
+        <p>R function : kmeans(x,k) &nbsp;&nbsp;&nbsp;x:data matrix, k:number of clusters</p>
+        <p>&nbsp;</p>
+    </ol>
+    <ul>
+        <li>PAM</li>
+        <p>Any distance can be used. Need a distance matrix as an input</p>
+        <p>Therefore, Any types of variables in X can be used.</p>
+        <p>Similar objective function as k-means: Minimize total within scatter</p>
+        <p>Computationally more intensive then k-means</p>
+        <p>R function : pam(dist(x),k) or pam(x,k) &nbsp;&nbsp;&nbsp;read help file. needs package &quot;cluster&quot;</p>
+    </ul>
+</ul>
+<p>&nbsp;</p>
+<ul>
+    <ul>
+        <li>Hierarchical clustering</li>
+        <p>Bottom-up clustering methods</p>
+        <p>Starts with n clusters and ends with 1 cluster.</p>
+        <p>Finds 2 closest objects, merge them find next closest, merge them until all objects are merged.</p>
+        <p>Needs a definition of distance between groups: most popular : Single Linkage, Complete Linkage, Group Average</p>
+        <p>R function : hclust(dist(x))</p>
+        <p>&nbsp;</p>
+    </ul>
+</ul>
+</body>
+
+</html>

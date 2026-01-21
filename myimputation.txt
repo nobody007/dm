@@ -1,0 +1,24 @@
+
+myimputation<-function(x,k=10){
+# this function imputes x-matrix using k-nn imputataion
+# x : x-matrix, k: nearest k neighborhood 
+# central. value functions fills the missing data
+# if numeric -> median
+# if categorical -> most frequen value
+
+	central.value <- function(x) {
+		if (is.numeric(x)) median(x,na.rm=T)
+		else if (is.factor(x)) levels(x)[which.max(table(x))] #mode value
+		else { #Compute mode value after change character varible to factor
+			f <- as.factor(x)
+			levels(f)[which.max(table(f))]
+		}
+	}
+	library(cluster)
+#dist.mtx has all pairwise distances in x-matrix
+#it uses daisy function in cluster package
+	dist.mtx<-as.matrix(daisy(x,stand=T))
+	for(r in which(!complete.cases(x))) x[r,which(is.na(x[r,]))] <- apply(data.frame(x[c(as.integer(names(sort(dist.mtx[r,])[2:(k+1)]))), which(is.na(x[r,]))]), 2,central.value)
+
+	return(x)
+}

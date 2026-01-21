@@ -1,0 +1,22 @@
+library(vtreat)
+
+# making dataset
+set.seed(123)
+data <- data.frame(
+  x1 = c('a', 'b', 'a', 'c', 'b', 'a'),  # categorical variable
+  x2 = c(10, 20, 30, 40, 50, NA),        # nemrical variable
+  y = c(1, 0, 1, 0, 1, 0)                # response variable(classification)
+)
+
+# Treatment plan
+treatment_plan <- vtreat::designTreatmentsC(
+  dframe = data,
+  varlist = c("x1", "x2"),  # explanatory variable
+  outcomename = "y",        # response variable
+  outcometarget = 1         # (1 = positive class, usually success=1)
+)
+
+# data preparation
+prepared_data <- vtreat::prepare(treatment_plan, data)
+
+print(prepared_data)

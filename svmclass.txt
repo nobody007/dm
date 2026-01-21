@@ -1,0 +1,98 @@
+# ---- Setup ----
+set.seed(123)
+pkgs <- c("e1071", "ggplot2", "pROC", "caret")
+to_install <- pkgs[!pkgs %in% rownames(installed.packages())]
+if (length(to_install)) install.packages(to_install, repos = "https://cloud.r-project.org")
+lapply(pkgs, library, character.only = TRUE)
+
+# ---- 1) Synthetic data (two overlapping Gaussians) ----
+n_per_class <- 350
+Sigma0 <- matrix(c(1.0, 0.3,
+                   0.3, 0.8), 2, 2)
+Sigma1 <- matrix(c(1.2, -0.4,
+                   -0.4, 1.0), 2, 2)
+
+x0 <- MASS::mvrnorm(n_per_class, mu = c(-1.2, -0.1), Sigma = Sigma0)
+x1 <- MASS::mvrnorm(n_per_class, mu = c( 1.1,  0.6), Sigma = Sigma1)
+
+dat <- data.frame(
+  x1 = c(x0[,1], x1[,1]),
+  x2 = c(x0[,2], x1[,2]),
+  y  = factor(c(rep("A", n_per_class), rep("B", n_per_class)))
+)
+
+# Train / test split
+set.seed(123)
+idx <- createDataPartition(dat$y, p = 0.75, list = FALSE)
+train <- dat[idx, ]
+test  <- dat[-idx, ]
+
+# ---- 2) Baseline SVM (RBF kernel) ----
+svm0 <- svm(
+  y ~ ., data = train,
+  type = "C-classification",
+  kernel = "radial",
+  cost = 1, gamma = 0.5,
+  probability = TRUE,
+  scale = TRUE
+)
+
+# ---- 3) Hyperparameter tuning (5-fold CV) ----
+set.seed(123)
+tuned <- tune(
+  svm, y ~ ., data = train,
+  kernel = "radial", type = "C-classification",
+  ranges = list(
+    cost  = 10^seq(-1, 2, by = 1),    # 0.1, 1, 10, 100
+    gamma = 2^seq(-4, 1, by = 1)      # 1/16, 1/8, 1/4, 1/2, 1, 2
+  ),
+  tunecontrol = tune.control(sampling = "cross", cross = 5),
+  probability = TRUE,
+  scale = TRUE
+)
+
+tuned$best.parameters
+svm_best <- tuned$best.model
+
+# ---- 4) Evaluation ----
+# Predictions (class + probability)
+pred_tr <- predict(svm_best, newdata = train, probability = TRUE)
+pred_te <- predict(svm_best, newdata = test,  probability = TRUE)
+
+# Confusion matrices & accuracy
+cm_tr <- confusionMatrix(pred_tr, train$y)
+cm_te <- confusionMatrix(pred_te, test$y)
+cm_tr; cm_te
+cat(sprintf("Train Accuracy: %.3f\n", cm_tr$overall["Accuracy"]))
+cat(sprintf("Test  Accuracy: %.3f\n", cm_te$overall["Accuracy"]))
+
+# ROC-AUC (need probabilities for a given positive class, say 'B')
+prob_te <- attr(pred_te, "probabilities")[, "B"]
+roc_te  <- roc(response = test$y, predictor = prob_te, levels = c("A","B"))
+cat(sprintf("Test ROC-AUC: %.3f\n", auc(roc_te)))
+
+# ---- 5) Decision boundary plot ----
+# Grid over input space
+x1_seq <- seq(min(dat$x1) - 1, max(dat$x1) + 1, length.out = 300)
+x2_seq <- seq(min(dat$x2) - 1, max(dat$x2) + 1, length.out = 300)
+grid   <- expand.grid(x1 = x1_seq, x2 = x2_seq)
+
+# Predict class prob. for grid
+grid_pred <- predict(svm_best, newdata = grid, probability = TRUE)
+grid_prob <- attr(grid_pred, "probabilities")[, "B"]
+grid$probB <- grid_prob
+grid$class <- as.factor(ifelse(grid_prob >= 0.5, "B", "A"))
+
+# Plot
+p <- ggplot() +
+  geom_raster(data = grid, aes(x1, x2, fill = probB), alpha = 0.35) +
+  scale_fill_gradient(name = "P(class=B)", low = "#FEE0D2", high = "#CB181D") +
+  geom_contour(data = grid, aes(x1, x2, z = probB), breaks = 0.5,
+               color = "black", linewidth = 1) +
+  geom_point(data = train, aes(x1, x2, color = y), size = 1.6, alpha = 0.8) +
+  labs(title = "SVM Classification (RBF kernel) with Tuned Hyperparameters",
+       subtitle = paste0("Best: C=", svm_best$cost, ", gamma=", svm_best$gamma),
+       x = "x1", y = "x2") +
+  theme_minimal(base_size = 13) +
+  theme(legend.position = "right")
+print(p)

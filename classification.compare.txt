@@ -1,0 +1,41 @@
+p<-0.7   # proportion of training set
+n<-nrow(iris)
+
+
+rep.n<-100  # number of repetition
+
+misclass<-matrix(rep(0,rep.n*6),ncol=6)
+for (i in 1:rep.n){
+        train.ind<-sample(n,as.integer(n*p))  #get train index randomly
+	   train.data<-iris[train.ind,]       #get train data
+        test.data<-iris[-train.ind,]       #get test data
+
+	lda1<-lda(Species~., data=train.data)
+	lda1.pred<-predict(lda1,test.data)$class
+	qda1<-qda(Species~., data=train.data)
+	qda1.pred<-predict(qda1,test.data)$class
+
+	logis1<-multinom(Species~., data=train.data)
+	logis1.pred<-predict(logis1,test.data)
+
+	tr1<-tree(Species~., data=train.data)
+	tr1.pred<-predict(tr1,test.data)
+	tr1.pred<-levels(iris$Species)[max.col(tr1.pred)]
+
+	nn1<-nnet(Species~., data=train.data,size=10)
+	nn1.pred<-predict(nn1,test.data)
+	nn1.pred<-levels(iris$Species)[max.col(nn1.pred)]
+
+	svm1<-svm(Species~., data=train.data)
+	svm1.pred<-predict(svm1,test.data)
+
+	misclass[i,1]<-mean(ifelse(test.data$Species==lda1.pred,0,1))
+	misclass[i,2]<-mean(ifelse(test.data$Species==qda1.pred,0,1))
+	misclass[i,3]<-mean(ifelse(test.data$Species==logis1.pred,0,1))
+	misclass[i,4]<-mean(ifelse(test.data$Species==tr1.pred,0,1))
+	misclass[i,5]<-mean(ifelse(test.data$Species==nn1.pred,0,1))
+	misclass[i,6]<-mean(ifelse(test.data$Species==svm1.pred,0,1))
+
+	print(i)
+}
+

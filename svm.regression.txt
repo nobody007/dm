@@ -1,0 +1,87 @@
+# ---- Setup ----
+set.seed(42)
+if (!require(e1071)) install.packages("e1071", repos="https://cloud.r-project.org")
+if (!require(ggplot2)) install.packages("ggplot2", repos="https://cloud.r-project.org")
+
+library(e1071)
+library(ggplot2)
+
+# ---- 1) Synthetic data ----
+n <- 300
+x <- sort(runif(n, -3, 3))
+f_true <- function(x) sin(x) + 0.3*x
+y <- f_true(x) + rnorm(n, sd = 0.25)   # noise
+
+dat <- data.frame(x, y)
+
+# train / test split
+set.seed(42)
+idx <- sample(seq_len(n), size = round(n*0.75))
+train <- dat[idx, ]
+test  <- dat[-idx, ]
+
+# ---- 2) Baseline SVR (RBF kernel) ----
+# cost = C, gamma = 1/(2*sigma^2) in e1071's RBF: exp(-gamma * ||x - x'||^2)
+svr0 <- svm(y ~ x, data = train,
+            type = "eps-regression",
+            kernel = "radial",
+            cost = 10, gamma = 0.5, epsilon = 0.1, scale = TRUE)
+
+# ---- 3) Hyperparameter tuning (k-fold CV) ----
+set.seed(42)
+tune.grid <- expand.grid(
+  cost = 10^seq(-1, 2, by=1),         # 0.1, 1, 10, 100
+  gamma = 2^seq(-3, 1, by=1),         # 1/8, 1/4, 1/2, 1, 2
+  epsilon = c(0.05, 0.1, 0.2)
+)
+
+# e1071::tune can't take expand.grid directly; loop or use ranges:
+tuned <- tune(
+  svm,
+  y ~ x,
+  data = train,
+  ranges = list(
+    cost = unique(tune.grid$cost),
+    gamma = unique(tune.grid$gamma),
+    epsilon = unique(tune.grid$epsilon)
+  ),
+  type = "eps-regression",
+  kernel = "radial",
+  tunecontrol = tune.control(sampling = "cross", cross = 5)
+)
+
+tuned$best.parameters
+svr <- tuned$best.model   # best SVR
+
+# ---- 4) Evaluate ----
+pred_tr <- predict(svr, newdata = train)
+pred_te <- predict(svr, newdata = test)
+
+mae  <- function(a,b) mean(abs(a-b))
+rmse <- function(a,b) sqrt(mean((a-b)^2))
+
+cat("Train  MAE:", round(mae(train$y, pred_tr), 4),
+    " RMSE:", round(rmse(train$y, pred_tr), 4), "\n")
+cat("Test   MAE:", round(mae(test$y,  pred_te),  4),
+    " RMSE:", round(rmse(test$y,  pred_te),  4), "\n")
+
+# ---- 5) Visualization with epsilon-tube ----
+# grid for smooth fitted curve
+xg <- data.frame(x = seq(min(dat$x), max(dat$x), length.out = 400))
+pg <- predict(svr, xg)
+
+# epsilon from the fitted model
+eps <- svr$epsilon
+
+p <- ggplot(dat, aes(x, y)) +
+  geom_point(alpha = 0.35, size = 1.6) +
+  geom_line(data = data.frame(x=xg$x, y=pg), color = "#0072B2", linewidth = 1.1) +
+  geom_line(data = data.frame(x=xg$x, y=pg + eps), linetype = "dashed", color = "#D55E00") +
+  geom_line(data = data.frame(x=xg$x, y=pg - eps), linetype = "dashed", color = "#D55E00") +
+  stat_function(fun = f_true, color = "gray40", linewidth = 0.9, alpha = 0.8) +
+  labs(title = "SVR (RBF kernel) with ε-insensitive Tube",
+       subtitle = paste0("Best params: C=", svr$cost, ", gamma=", svr$gamma, ", epsilon=", svr$epsilon),
+       y = "y") +
+  theme_minimal(base_size = 13)
+
+print(p)

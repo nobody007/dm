@@ -1,0 +1,60 @@
+#### Model performance using prediction error : training and test dataset
+
+x1<-runif(100,1,100)
+x2<-rnorm(100,10,10)
+
+y<-3+5*x1-7*x2+rnorm(100,0,3)
+
+#make dataframe
+mydata1<-as.data.frame(cbind(y,x1,x2))
+
+#random partition for training and test
+p<-0.7   # proportion of training set
+n<-nrow(mydata1)
+
+
+rep.n<-100  # number of repetition
+
+mse<-rep(0,rep.n)
+for (i in 1:rep.n){
+        train.ind<-sample(n,as.integer(n*p))  #get train index randomly
+	train.data<-mydata1[train.ind,]       #get train data
+        test.data<-mydata1[-train.ind,]       #get test data
+
+        lm.fit1<-lm(y~.,data=train.data)      #model fitting using train data
+        lm.pred<-predict(lm.fit1,test.data)   #get fitted values for test data
+        mse[i]<-mean((lm.pred-test.data$y)^2) #compute mse
+	
+}
+
+
+#################################################################################
+## Now Cross validation : 10 fold cv computation
+
+x1<-runif(100,1,100)
+x2<-rnorm(100,10,10)
+
+y<-3+5*x1-7*x2+rnorm(100,0,3)
+
+#make dataframe
+mydata1<-as.data.frame(cbind(y,x1,x2))
+K<-10  # 10-fold
+
+myind<-sample(nrow(mydata1))
+len1<-floor(length(myind)/K)
+cv.err<-rep(0,K)
+for (i in 1:K){
+        startind<-(i-1)*len1+1   
+        if (i==K){
+                endind<-nrow(mydata1)} else
+                {endind<-i*len1}
+        testind<-myind[startind:endind]
+        traindata<-mydata1[-testind,]
+        testdata<-mydata1[testind,]
+
+        lm.fit1<-lm(y~x1+x2,data=traindata)
+        lm.pred<-predict(lm.fit1,testdata)
+        cv.err[i]<-mean((lm.pred-testdata$y)^2)
+}
+
+

@@ -1,0 +1,411 @@
+# ######################################################################
+# CHAPTER - ALGAE
+# ----------------------------------------------------------------------
+
+# ======================================================================
+# Section 'Loading the data...'
+
+algae <- read.table('Analysis.txt',
+            header=F,
+            dec='.',
+            col.names=c('season','size','speed','mxPH','mnO2','Cl','NO3',
+            'NH4','oPO4','PO4','Chla','a1','a2','a3','a4','a5','a6','a7'),
+            na.strings=c('XXXXXXX'),
+			stringsAsFactors=T)
+
+
+
+# ======================================================================
+# Section 'A first glance at ...'
+
+summary(algae)
+
+hist(algae$mxPH, prob=T)
+
+hist(algae$mxPH, prob=T, xlab='',main='Histogram of Maximum PH value',ylim=0:1)
+lines(density(algae$mxPH,na.rm=T))
+rug(jitter(algae$mxPH))
+
+boxplot(algae$oPO4,boxwex=0.15,ylab='Ortophosphate (oPO4)')
+rug(jitter(algae$oPO4),side=2)
+abline(h=mean(algae$oPO4,na.rm=T),lty=2)
+
+plot(algae$NH4,xlab='')
+abline(h=mean(algae$NH4,na.rm=T),lty=1)
+abline(h=mean(algae$NH4,na.rm=T)+sd(algae$NH4,na.rm=T),lty=2)
+abline(h=median(algae$NH4,na.rm=T),lty=3)
+identify(algae$NH4)
+
+
+algae[algae$NH4 > 19000,]
+# or (less jammed version! Try to understand why.)
+algae[!is.na(algae$NH4) & algae$NH4 > 19000,]
+
+library(lattice)
+bwplot(size ~ a1, data=algae,ylab='River Size',xlab='Alga A1')
+
+minO2 <- equal.count(na.omit(algae$mnO2),number=4,overlap=1/5)
+stripplot(season ~ a3|minO2,data=algae[!is.na(algae$mnO2),])
+
+
+# ======================================================================
+# Section 'Unknown Values'
+
+
+algae[!complete.cases(algae),]
+nrow(algae[!complete.cases(algae),])
+
+algae <- na.omit(algae)
+
+algae <- algae[-c(62,199),]
+
+algae[48,'mxPH'] <- mean(algae$mxPH,na.rm=T)
+
+algae[is.na(algae$Chla),'Chla'] <- median(algae$Chla,na.rm=T)
+
+cor(algae[,4:18],use="complete.obs")
+
+symnum(cor(algae[,4:18],use="complete.obs"))
+
+lm(oPO4 ~ PO4,data=algae)
+
+algae[28,'PO4'] <- (algae[28,'oPO4']+15.6142)/0.6466
+
+fillPO4 <- function(oP) {
+  if (is.na(oP)) return(NA)
+  else return((oP+15.6142)/0.6466)
+}
+algae[is.na(algae$PO4),'PO4'] <- sapply(algae[is.na(algae$PO4),'oPO4'],fillPO4)
+
+histogram(~ mxPH | season,data=algae)
+
+histogram(~ mxPH | size*speed,data=algae)
+
+stripplot(size ~ mxPH | speed,data=algae,jitter=T)
+
+algae <- read.table('Analysis.txt',
+             header=F,
+             dec='.',
+             col.names=c('season','size','speed','mxPH','mnO2','Cl','NO3',
+             'NH4','oPO4','PO4','Chla','a1','a2','a3','a4','a5','a6','a7'),
+             na.strings=c('XXXXXXX'))
+algae <- algae[-c(62,199),]
+
+library(cluster)
+dist.mtx <- as.matrix(daisy(algae,stand=T))
+
+which(!complete.cases(algae))
+
+sort(dist.mtx[38,])[1:10]
+
+as.integer(names(sort(dist.mtx[38,])[2:11]))
+
+algae[38,]
+
+median(algae[c(as.integer(names(sort(dist.mtx[38,])[2:11]))),'mnO2'])
+
+algae[38,'mnO2'] <- median(algae[c(as.integer(names(sort(dist.mtx[38,])[2:11]))),'mnO2'],na.rm=T)
+
+apply(algae[c(as.integer(names(sort(dist.mtx[55,])[2:11]))),which(is.na(algae[55,]))],2,median,na.rm=T)
+
+central.value <- function(x) {
+  if (is.numeric(x)) median(x,na.rm=T)
+  else if (is.factor(x)) levels(x)[which.max(table(x))]
+  else {
+    f <- as.factor(x)
+    levels(f)[which.max(table(f))]
+  }
+}
+
+
+for(r in which(!complete.cases(algae))) algae[r,which(is.na(algae[r,]))] <- apply(data.frame(algae[c(as.integer(names(sort(dist.mtx[r,])[2:11]))), which(is.na(algae[r,]))]), 2,central.value)
+
+
+
+
+# ======================================================================
+# Section Obtaining prediction models
+
+algae <- read.table('Analysis.txt',
+             header=F,
+             dec='.',
+             col.names=c('season','size','speed','mxPH','mnO2','Cl','NO3',
+             'NH4','oPO4','PO4','Chla','a1','a2','a3','a4','a5','a6','a7'),
+             na.strings=c('XXXXXXX'))
+algae <- algae[-c(62,199),]
+clean.algae <- algae
+for(r in which(!complete.cases(algae))) clean.algae[r,which(is.na(algae[r,]))] <- apply(data.frame(algae[c(as.integer(names(sort(dist.mtx[r,])[2:11]))), which(is.na(algae[r,]))]), 2,central.value)
+
+lm.a1 <- lm(a1 ~ .,data=clean.algae[,1:12])
+
+summary(lm.a1)
+
+anova(lm.a1)
+
+lm2.a1 <- update(lm.a1, . ~ . - season)
+
+summary(lm2.a1)
+
+anova(lm.a1,lm2.a1)
+
+final.lm <- step(lm.a1)
+
+summary(final.lm)
+
+
+library(rpart)
+algae <- read.table('Analysis.txt',
+             header=F,
+             dec='.',
+             col.names=c('season','size','speed','mxPH','mnO2','Cl','NO3',
+             'NH4','oPO4','PO4','Chla','a1','a2','a3','a4','a5','a6','a7'),
+             na.strings=c('XXXXXXX'))
+algae <- algae[-c(62,199),]
+rt.a1 <- rpart(a1 ~ .,data=algae[,1:12])
+
+rt.a1
+
+plot(rt.a1,uniform=T,branch=1, margin=0.1, cex=0.9)
+text(rt.a1,cex=0.75)
+
+printcp(rt.a1)
+
+rt2.a1 <- prune(rt.a1,cp=0.08)
+rt2.a1
+
+
+reliable.rpart <- function(form,data,se=1,cp=0,verbose=T,...) {
+  tree <- rpart(form,data,cp=cp,...)
+  if (verbose & ncol(tree$cptable) < 5) 
+    warning("No pruning will be carried out because cross-validation estimates where not obtained.")
+  rt.prune(tree,se,verbose)
+}
+rt.prune <- function(tree,se=1,verbose=T,...) {
+  if (ncol(tree$cptable) < 5) tree
+  else {
+    lin.min.err <- which.min(tree$cptable[,4])
+    if (verbose & lin.min.err == nrow(tree$cptable))
+      warning("Minimal Cross Validation Error is obtained at the largest tree. \n  Further tree growth (achievable through smaller 'cp' parameter value),\n  could produce more accurate tree.\n")
+    tol.err <- tree$cptable[lin.min.err,4] + se * tree$cptable[lin.min.err,5]
+    se.lin <- which(tree$cptable[,4] <= tol.err)[1]
+    prune.rpart(tree,cp=tree$cptable[se.lin,1]+1e-9)
+  }
+}
+
+(rt.a1 <- reliable.rpart(a1 ~ .,data=algae[,1:12]))
+
+first.tree <- rpart(a1 ~ .,data=algae[,1:12])
+snip.rpart(first.tree,c(4,7))
+
+plot(first.tree)
+text(first.tree)
+snip.rpart(first.tree)
+
+
+# ======================================================================
+# Section 'Model evaluation and selection'
+
+lm.predictions.a1 <- predict(final.lm,clean.algae)
+rt.predictions.a1 <- predict(rt.a1,algae)
+
+(mae.a1.lm <- mean(abs(lm.predictions.a1-algae[,'a1'])))
+(mae.a1.rt <- mean(abs(rt.predictions.a1-algae[,'a1'])))
+
+(mse.a1.lm <- mean((lm.predictions.a1-algae[,'a1'])^2))
+(mse.a1.rt <- mean((rt.predictions.a1-algae[,'a1'])^2))
+
+(nmse.a1.lm <- mean((lm.predictions.a1-algae[,'a1'])^2)/mean((mean(algae[,'a1'])-algae[,'a1'])^2))
+(nmse.a1.rt <- mean((rt.predictions.a1-algae[,'a1'])^2)/mean((mean(algae[,'a1'])-algae[,'a1'])^2))
+
+old.par <- par(mfrow=c(2,1))
+plot(lm.predictions.a1,algae[,'a1'],main="Linear Model",xlab="Predictions",ylab="True Values")
+abline(0,1,lty=2)
+plot(rt.predictions.a1,algae[,'a1'],main="Regression Tree",xlab="Predictions",ylab="True Values")
+abline(0,1,lty=2)
+par(old.par)
+
+plot(lm.predictions.a1,algae[,'a1'],main="Linear Model",xlab="Predictions",ylab="True Values")
+abline(0,1,lty=2)
+identify(lm.predictions.a1,algae[,'a1'])
+
+plot(lm.predictions.a1,algae[,'a1'],main="Linear Model",xlab="Predictions",ylab="True Values")
+abline(0,1,lty=2)
+algae[identify(lm.predictions.a1,algae[,'a1']),]
+
+sensible.lm.predictions.a1 <- ifelse(lm.predictions.a1 < 0,0,lm.predictions.a1)
+(mae.a1.lm <- mean(abs(sensible.lm.predictions.a1-algae[,'a1'])))
+(nmse.a1.lm <- mean((sensible.lm.predictions.a1-algae[,'a1'])^2)/mean((mean(algae[,'a1'])-algae[,'a1'])^2))
+
+
+cross.validation <- function(all.data,clean.data,n.folds=10) {
+
+  n <- nrow(all.data)
+  idx <- sample(n,n)
+  all.data <- all.data[idx,]
+  clean.data <- clean.data[idx,]
+  
+  n.each.part <- as.integer(n/n.folds)
+
+  perf.lm <- vector()
+  perf.rt <- vector()
+
+  for(i in 1:n.folds) {
+    cat('Fold ',i,'\n')
+    out.fold <- ((i-1)*n.each.part+1):(i*n.each.part)
+
+    l.model <- lm(a1 ~ .,clean.data[-out.fold,1:12])
+    l.model <- step(l.model)
+    l.model.preds <- predict(l.model,clean.data[out.fold,1:12])
+    l.model.preds <- ifelse(l.model.preds < 0,0,l.model.preds)
+
+    r.model <- reliable.rpart(a1 ~ .,all.data[-out.fold,1:12])
+    r.model.preds <- predict(r.model,all.data[out.fold,1:12])
+
+    perf.lm[i] <- mean((l.model.preds-all.data[out.fold,'a1'])^2)/mean((mean(all.data[-out.fold,'a1'])-all.data[out.fold,'a1'])^2)
+    perf.rt[i] <- mean((r.model.preds-all.data[out.fold,'a1'])^2)/mean((mean(all.data[-out.fold,'a1'])-all.data[out.fold,'a1'])^2)
+  }
+
+  list(lm=list(avg=mean(perf.lm),std=sd(perf.lm),fold.res=perf.lm),
+       rt=list(avg=mean(perf.rt),std=sd(perf.rt),fold.res=perf.rt))
+}
+cv10.res <- cross.validation(algae,clean.algae)
+cv10.res
+
+t.test(cv10.res$lm$fold.res,cv10.res$rt$fold.res,paired=T)
+
+# ======================================================================
+# Section 'Predictions for the 7 algae'
+
+test.algae <- read.table('Eval.txt',
+          header=F,
+          dec='.',
+          col.names=c('season','size','speed','mxPH','mnO2','Cl',
+          'NO3','NH4','oPO4','PO4','Chla'),
+          na.strings=c('XXXXXXX'))
+
+
+
+data4dist <- rbind(algae[,1:11],test.algae[,1:11])
+dist.mtx <- as.matrix(daisy(data4dist,stand=T))
+clean.test.algae <- test.algae
+for(r in which(!complete.cases(test.algae))) clean.test.algae[r,which(is.na(test.algae[r,]))] <- apply(data.frame(data4dist[c(as.integer(names(sort(dist.mtx[r+198,])[2:11]))), which(is.na(test.algae[r,]))]), 2,central.value)
+
+
+cv.all <- function(all.data,clean.data,n.folds=10) {
+
+  n <- nrow(all.data)
+  idx <- sample(n,n)
+  all.data <- all.data[idx,]
+  clean.data <- clean.data[idx,]
+
+  n.each.part <- as.integer(n/n.folds)
+
+  perf.lm <- matrix(nrow=n.folds,ncol=7)
+  perf.rt <- matrix(nrow=n.folds,ncol=7)
+  perf.comb <- matrix(nrow=n.folds,ncol=7)
+
+  for(i in 1:n.folds) {
+    cat('Fold ',i,'\n')
+    out.fold <- ((i-1)*n.each.part+1):(i*n.each.part)
+
+    for(a in 1:7) {
+
+      form <- as.formula(paste(names(all.data)[11+a],"~."))
+      l.model <- lm(form,clean.data[-out.fold,c(1:11,11+a)])
+      l.model <- step(l.model)
+      l.model.preds <- predict(l.model,clean.data[out.fold,c(1:11,11+a)])
+      l.model.preds <- ifelse(l.model.preds < 0,0,l.model.preds)
+
+      r.model <- reliable.rpart(form,all.data[-out.fold,c(1:11,11+a)])
+      r.model.preds <- predict(r.model,all.data[out.fold,c(1:11,11+a)])
+
+      perf.lm[i,a] <- mean((l.model.preds-all.data[out.fold,11+a])^2)/mean((mean(all.data[-out.fold,11+a])-all.data[out.fold,11+a])^2)
+      perf.rt[i,a] <- mean((r.model.preds-all.data[out.fold,11+a])^2)/mean((mean(all.data[-out.fold,11+a])-all.data[out.fold,11+a])^2)
+
+      wl <- 1-perf.lm[i,a]/(perf.lm[i,a]+perf.rt[i,a])
+      wr <- 1-wl
+      comb.preds <- wl*l.model.preds + wr*r.model.preds
+      perf.comb[i,a] <- mean((comb.preds-all.data[out.fold,11+a])^2)/mean((mean(all.data[-out.fold,11+a])-all.data[out.fold,11+a])^2)
+      
+      cat(paste("Algal a",a,sep=""),"\tlm=",perf.lm[i,a],"\trt=",perf.rt[i,a],"\tcomb=",perf.comb[i,a],"\n")
+    }
+  }
+
+  lm.res <- apply(perf.lm,2,mean)
+  names(lm.res) <- paste("a",1:7,sep="")
+  rt.res <- apply(perf.rt,2,mean)
+  names(rt.res) <- paste("a",1:7,sep="")
+  comb.res <- apply(perf.comb,2,mean)
+  names(comb.res) <- paste("a",1:7,sep="")
+  list(lm=lm.res,rt=rt.res,comb=comb.res)
+}
+all.res <- cv.all(algae,clean.algae)
+all.res
+
+
+
+lm.all <- function(train,test) {
+  results <- list()
+  results$models <- list()
+  results$preds <- list()
+  for (alg in 1:7) {
+    results$models[[alg]] <- step(lm(as.formula(paste(names(train)[11+alg],'~ .')),data=train[,c(1:11,11+alg)]))
+    p <- predict(results$models[[alg]],test)
+    results$preds[[alg]] <- ifelse(p<0,0,p)
+  }
+  results
+}
+lm.models <- lm.all(clean.algae,clean.test.algae)
+
+
+summary(lm.models$models[[5]])
+
+
+rt.all <- function(train,test) {
+  results <- list()
+  results$models <- list()
+  results$preds <- list()
+  for (alg in 1:7) {
+    results$models[[alg]] <- reliable.rpart(as.formula(paste(names(train)[11+alg],'~ .')),data=train[,c(1:11,11+alg)])
+    results$preds[[alg]] <- predict(results$models[[alg]],test)
+  }
+  results
+}
+rt.models <- rt.all(algae,test.algae)
+
+
+final.preds <- function(lm.preds,rt.preds,ws) {
+  final <- matrix(nrow=140,ncol=7)
+  for (alg in 1:7) {
+    wl <- 1-ws$lm[alg]/(ws$lm[alg]+ws$rt[alg])
+    wr <- 1-wl
+    final[,alg] <- wl*lm.preds[[alg]] + wr*rt.preds[[alg]]
+  }
+  colnames(final) <- paste('a',1:7,sep='')
+  final
+}
+final <- final.preds(lm.models$preds,rt.models$preds,all.res)
+final[1:10,]
+
+algae.sols <- read.table('Sols.txt',header=F,dec='.',col.names=c('a1','a2','a3','a4','a5','a6','a7'))
+sq.errs <- (final-algae.sols)^2
+abs.errs <- abs(final-algae.sols)
+apply(sq.errs,2,mean)
+apply(abs.errs,2,mean)
+baseline.preds <- apply(algae[,paste('a',1:7,sep='')],2,mean)
+base.sq.errs <- (matrix(rep(baseline.preds,nrow(algae.sols)),byrow=T,ncol=T)-algae.sols)^2
+apply(sq.errs,2,mean)/apply(base.sq.errs,2,mean)
+
+
+rt.preds <- matrix(nrow=140,ncol=7)
+lm.preds <- matrix(nrow=140,ncol=7)
+for(a in 1:7) {rt.preds[,a] <- rt.models$preds[[a]];lm.preds[,a] <- lm.models$preds[[a]]}
+rt.sq.errs <- (rt.preds-algae.sols)^2
+lm.sq.errs <- (lm.preds-algae.sols)^2
+apply(rt.sq.errs,2,mean)/apply(sq.errs,2,mean)
+apply(lm.sq.errs,2,mean)/apply(sq.errs,2,mean)
+
+
+
+
+

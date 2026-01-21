@@ -1,0 +1,72 @@
+<html>
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=euc-kr">
+<title>LDA (Linear Discriminant Analysis)</title>
+<meta name="generator" content="Namo WebEditor(Trial)">
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="purple" alink="red">
+<p>LDA (Linear Discriminant Analysis)</p>
+<p>1. Class conditional prob. is assumed MVN</p>
+<p>2. Compute the posterior prob. P(G=k |X=x) &nbsp;(by Bayes rule)</p>
+<p>3. Assign x to the class k with the highest posterior prob. (it can be also done by using discriminant function)</p>
+<p>4. Fisher's approach : Find the linear combination of X s.t the ratio of between variance and within variance is maximized</p>
+<p>5. LDA can be used the dimension reduction like PCA. PCA finds the direction(coordinates) that maximizes variance, LDA finds the direction that maximizes separateness.</p>
+<p>sample code</p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">lda1 &lt;- lda(Species~., data=iris)</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">&gt; lda1</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">Call:</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">lda(Species ~ ., data = iris)</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">&nbsp;</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">Prior probabilities of groups:</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">&nbsp;&nbsp;&nbsp;&nbsp;setosa versicolor &nbsp;virginica </span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">&nbsp;0.3333333 &nbsp;0.3333333 &nbsp;0.3333333 </span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">&nbsp;</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">Group means:</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Sepal.Length Sepal.Width Petal.Length Petal.Width</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">setosa &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5.006 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3.428 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1.462 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;0.246</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">versicolor &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5.936 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.770 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;4.260 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1.326</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">virginica &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;6.588 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.974 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;5.552 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2.026</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">&nbsp;</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">Coefficients of linear discriminants:</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LD1 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;LD2</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">Sepal.Length &nbsp;0.8293776 &nbsp;0.02410215</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">Sepal.Width &nbsp;&nbsp;1.5344731 &nbsp;2.16452123</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">Petal.Length -2.2012117 -0.93192121</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">Petal.Width &nbsp;-2.8104603 &nbsp;2.83918785</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">&nbsp;</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">Proportion of trace:</span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">&nbsp;&nbsp;&nbsp;LD1 &nbsp;&nbsp;&nbsp;LD2 </span></font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New"><span style="background-color:rgb(178,177,168);">0.9912 0.0088 </span></font></p>
+<p>&nbsp;</p>
+<p>#Here, LD1 separates the class 99.12% and LD2 0.0088</p>
+<p><font face="Courier New">lda1$svd^2/sum(lda1$svd^2)</font></p>
+<p><font face="Courier New"><span style="background-color:rgb(178,177,168);">[1] 0.991212605 0.008787395</span></font></p>
+<p>&nbsp;</p>
+<p>#Let's check the plot of LD1, LD2</p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">plot(lda1)</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">&nbsp;</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">#change the plot</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">&nbsp;</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">#change colors</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">plot(lda1,col = as.integer(iris$Species))</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">&nbsp;</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">##too messy?</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">plot(lda1, panel = function(x, y, ...) points(x, y, ...),</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">&nbsp;col = as.integer(iris$Species), pch=20)</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">&nbsp;</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">plot(lda1, panel = function(x, y, ...) points(x, y, ...),</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">&nbsp;col = as.integer(iris$Species), pch=as.integer(iris$Species),</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">main=&quot;LDA plot for iris data&quot;)</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">legend(7,-5,levels(iris$Species),pch=1:3,col=1:3)</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">&nbsp;</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">lda1.pred&lt;-predict(lda1,iris)</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">#missclassification rate?</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">mean(ifelse(iris$Species!=lda1.pred$class,1,0))</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">#confusion matrix</font></p>
+<p style="line-height:100%; margin-top:0; margin-bottom:0;"><font face="Courier New">table(iris$Species,lda1.pred$class)</font></p>
+<p>&nbsp;</p>
+</body>
+
+</html>

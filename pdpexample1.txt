@@ -1,0 +1,74 @@
+library(randomForest)
+library(pdp)
+library(ggplot2)
+
+rf1<-randomForest(Species~., data=iris)
+
+
+pred.prob1 <- function(object, newdata) { # see ?predict.svm
+pred <- predict(object, newdata, type="prob")
+myprob <- pred[,1]
+mean(myprob)
+}
+
+pred.prob2 <- function(object, newdata) { # see ?predict.svm
+pred <- predict(object, newdata, type="prob")
+myprob <- pred[,2]
+mean(myprob)
+}
+
+pred.prob3 <- function(object, newdata) { # see ?predict.svm
+pred <- predict(object, newdata, type="prob")
+myprob <- pred[,3]
+mean(myprob)
+}
+
+
+pdp1<-partial(rf1,pred.var="Petal.Width",pred.fun=pred.prob1,plot=TRUE,which.class="setosa")
+pdp2<-partial(rf1,pred.var="Petal.Width",pred.fun=pred.prob2,plot=TRUE,which.class="virsicolor")
+pdp3<-partial(rf1,pred.var="Petal.Width",pred.fun=pred.prob3,plot=TRUE,which.class="virginica")
+
+grid.arrange(pdp1,pdp2,pdp3,ncol=3)
+
+
+pdp1<-partial(rf1,pred.var="Petal.Width",pred.fun=pred.prob1,which.class="setosa")
+pdp2<-partial(rf1,pred.var="Petal.Width",pred.fun=pred.prob2,which.class="virsicolor")
+pdp3<-partial(rf1,pred.var="Petal.Width",pred.fun=pred.prob3,which.class="virginica")
+
+plot(pdp1,type="l",ylim=c(0,1),ylab="prob")
+lines(pdp2,type="l",col=2)
+lines(pdp3,type="l",col=3)
+legend(0.1,1.0,c("setosa","virsicolor","virginica"),lty=rep(1,3),col=1:3)
+
+--------------------------------------------------------------------
+
+data(iris)
+set.seed(123)  
+
+# Random Forest
+rf_model <- randomForest(Species ~ ., data = iris, importance = TRUE, ntree = 500)
+print(rf_model)
+
+# PDP plot (Petal.Length, try it with other variables)
+pdp_setosa <- partial(rf_model, pred.var = "Petal.Length", which.class = "setosa", prob = TRUE)
+pdp_versicolor <- partial(rf_model, pred.var = "Petal.Length", which.class = "versicolor", prob = TRUE)
+pdp_virginica <- partial(rf_model, pred.var = "Petal.Length", which.class = "virginica", prob = TRUE)
+
+# data merge
+pdp_data <- rbind(
+  data.frame(pdp_setosa, Class = "setosa"),
+  data.frame(pdp_versicolor, Class = "versicolor"),
+  data.frame(pdp_virginica, Class = "virginica")
+)
+
+# PDP plotting
+ggplot(pdp_data, aes(x = Petal.Length, y = yhat, color = Class)) +
+  geom_line(size = 1) +
+  labs(
+    title = "PDP for Petal.Length by Class",
+    x = "Petal.Length",
+    y = "Predicted Probability"
+  ) +
+  theme_minimal()
+
+

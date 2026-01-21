@@ -1,0 +1,113 @@
+algae <- read.table('Analysis.txt',
+             header=F,
+             dec='.',
+             col.names=c('season','size','speed','mxPH','mnO2','Cl','NO3',
+             'NH4','oPO4','PO4','Chla','a1','a2','a3','a4','a5','a6','a7'),
+             na.strings=c('XXXXXXX'))
+algae <- algae[-c(62,199),] #remove observations with high missing rate
+#recheck the categorical variables
+algae$season<-as.factor(algae$season)
+algae$speed<-as.factor(algae$speed)
+algae$size<-as.factor(algae$size)
+
+clean.algae <- algae
+
+library(cluster)
+dist.mtx <- as.matrix(daisy(algae[,1:11],stand=T))
+
+central.value <- function(x) {
+  if (is.numeric(x)) median(x,na.rm=T)
+  else if (is.factor(x)) levels(x)[which.max(table(x))]
+  else {
+    f <- as.factor(x)
+    levels(f)[which.max(table(f))]
+  }
+}
+
+
+for(r in which(!complete.cases(algae))) clean.algae[r,which(is.na(algae[r,]))] <- apply(data.frame(algae[c(as.integer(names(sort(dist.mtx[r,])[2:11]))), which(is.na(algae[r,]))]), 2,central.value)
+### Linear Model fitting 
+
+lm.a1 <- lm(a1 ~ .,data=clean.algae[,1:12])
+
+summary(lm.a1)
+
+final.lm <- step(lm.a1)
+
+summary(final.lm)
+###################################################################################################
+# Regression Tree fitting
+
+algae <- read.table('Analysis.txt',
+             header=F,
+             dec='.',
+             col.names=c('season','size','speed','mxPH','mnO2','Cl','NO3',
+             'NH4','oPO4','PO4','Chla','a1','a2','a3','a4','a5','a6','a7'),
+             na.strings=c('XXXXXXX'))
+algae <- algae[-c(62,199),]
+
+
+library(tree)
+tr1<-tree(a1~., data=algae[,1:12])
+plot(tr1);text(tr1)
+plot(algae$a1,predict(tr1,algae))
+abline(0,1,col=2)
+## check predicted values for the observations with missing
+
+
+##to compare lm and tree, we need to use the same dataset
+## use clean.algae which has no missing values just like lm
+
+tr1<-tree(a1~., data=clean.algae[,1:12])
+plot(tr1);text(tr1)
+plot(algae$a1,predict(tr1,algae))
+abline(0,1,col=2)
+
+## now let's find the optimal tree with minimum CV error
+tr1.cv<-cv.tree(tr1)
+for (i in 2:10){
+	tr1.cv$dev<-tr1.cv$dev+cv.tree(tr1)$dev
+}
+tr1.cv$dev<-tr1.cv$dev/10
+plot(tr1.cv)  #find the best size
+final.tr<-prune.tree(tr1,best=size)
+plot(final.tr);text(final.tr)
+
+######################################################################################################
+## compute predition error
+
+lm.predictions.a1 <- predict(final.lm,clean.algae)
+rt.predictions.a1 <- predict(final.tr,algae)
+
+(mae.a1.lm <- mean(abs(lm.predictions.a1-algae[,'a1'])))
+(mae.a1.rt <- mean(abs(rt.predictions.a1-algae[,'a1'])))
+
+(mse.a1.lm <- mean((lm.predictions.a1-algae[,'a1'])^2))
+(mse.a1.rt <- mean((rt.predictions.a1-algae[,'a1'])^2))
+
+(nmse.a1.lm <- mean((lm.predictions.a1-algae[,'a1'])^2)/mean((mean(algae[,'a1'])-algae[,'a1'])^2))
+(nmse.a1.rt <- mean((rt.predictions.a1-algae[,'a1'])^2)/mean((mean(algae[,'a1'])-algae[,'a1'])^2))
+
+
+par(mfrow=c(2,1))
+plot(lm.predictions.a1,algae[,'a1'],main="Linear Model",xlab="Predictions",ylab="True Values")
+abline(0,1,lty=2)
+plot(rt.predictions.a1,algae[,'a1'],main="Regression Tree",xlab="Predictions",ylab="True Values")
+abline(0,1,lty=2)
+
+
+par(mfrow=c(1,1))
+
+plot(lm.predictions.a1,algae[,'a1'],main="Linear Model",xlab="Predictions",ylab="True Values")
+abline(0,1,lty=2)
+identify(lm.predictions.a1,algae[,'a1'])
+
+plot(lm.predictions.a1,algae[,'a1'],main="Linear Model",xlab="Predictions",ylab="True Values")
+abline(0,1,lty=2)
+algae[identify(lm.predictions.a1,algae[,'a1']),]
+
+sensible.lm.predictions.a1 <- ifelse(lm.predictions.a1 < 0,0,lm.predictions.a1)
+(mae.a1.lm <- mean(abs(sensible.lm.predictions.a1-algae[,'a1'])))
+(nmse.a1.lm <- mean((sensible.lm.predictions.a1-algae[,'a1'])^2)/mean((mean(algae[,'a1'])-algae[,'a1'])^2))
+
+

@@ -1,0 +1,178 @@
+credit1<-read.table("credit.csv",header=T,sep=",")
+
+dim(credit1)
+summary(credit1)
+
+credit1$Cardhldr<-as.factor(credit1$Cardhldr)
+credit1$Ownrent<-as.factor(credit1$Ownrent)
+credit1$Selfempl<-as.factor(credit1$Selfempl)
+
+summary(credit1)
+
+library(MASS)
+lda1<-lda(Cardhldr~., data=credit1)
+lda1
+summary(lda1)
+
+lda1.pred<-predict(lda1,credit1)$class
+mean(ifelse(lda1.pred!=credit1$Cardhldr,1,0))
+table(lda1.pred,credit1$Cardhldr)
+
+
+logis1<-glm(Cardhldr~., data=credit1,family=binomial)
+summary(logis1)
+logis1.pred<-predict(logis1,credit1,"response")
+mean(ifelse(logis1.pred!=credit1$Cardhldr,1,0))
+table(logis1.pred,credit1$Cardhldr)
+
+library(nnet)
+logis2<-multinom(Cardhldr~., data=credit1)
+logis2
+
+logis2.pred<-predict(logis2,credit1)
+mean(ifelse(logis2.pred!=credit1$Cardhldr,1,0))
+table(logis2.pred,credit1$Cardhldr)
+
+
+logis3<-step(logis2)
+#summary(logis2)
+logis3.pred<-predict(logis3,credit1)
+mean(ifelse(logis3.pred!=credit1$Cardhldr,1,0))
+table(logis3.pred,credit1$Cardhldr)
+#check the coeff
+
+
+library(tree)
+tr1<-tree(Cardhldr~., data=credit1)
+plot(tr1);text(tr1)
+## plot looks funny, what is Avgexp? why it can classifiy so well?
+tr1.pred<-predict(tr1,credit1,"class")
+mean(ifelse(tr1.pred!=credit1$Cardhldr,1,0))
+table(tr1.pred,credit1$Cardhldr)
+
+library(randomForest)
+rf1<-randomForest(Cardhldr~., data=credit1)
+plot(rf1)
+rf1.pred<-predict(rf1,credit1)
+mean(ifelse(rf1.pred!=credit1$Cardhldr,1,0))
+table(rf1.pred,credit1$Cardhldr)
+## don't forget RF performance in training set is sometims too good!!
+
+library(nnet)
+nn1<-nnet(Cardhldr~., data=credit1, size=10, decay=0.1)
+nn1.pred<-predict(nn1,credit1,"class")
+mean(ifelse(nn1.pred!=credit1$Cardhldr,1,0))
+table(nn1.pred,credit1$Cardhldr)
+
+library(e1071)
+svm1<-svm(Cardhldr~., data=credit1)
+svm1.pred<-predict(svm1,credit1)
+mean(ifelse(svm1.pred!=credit1$Cardhldr,1,0))
+table(svm1.pred,credit1$Cardhldr)
+
+
+##now train/test computation
+
+p<-0.7   # proportion of training set
+n<-nrow(credit1)
+
+
+rep.n<-10  # number of repetition
+
+misclass<-matrix(rep(0,rep.n*6),ncol=6)
+for (i in 1:rep.n){
+        train.ind<-sample(n,as.integer(n*p))  #get train index randomly
+	   train.data<-credit1[train.ind,]       #get train data
+        test.data<-credit1[-train.ind,]       #get test data
+
+	lda1<-lda(Cardhldr~., data=train.data)
+	lda1.pred<-predict(lda1,test.data)$class
+	
+	logis1<-multinom(Cardhldr~., data=train.data)
+	logis1.pred<-predict(logis1,test.data)
+
+	tr1<-tree(Cardhldr~., data=train.data)
+	tr1.pred<-predict(tr1,test.data,"class")
+	
+
+	nn1<-nnet(Cardhldr~., data=train.data,size=10)
+	nn1.pred<-predict(nn1,test.data,"class")
+	
+	svm1<-svm(Cardhldr~., data=train.data)
+	svm1.pred<-predict(svm1,test.data)
+
+	rf1<-randomForest(Cardhldr~., data=train.data)
+	rf1.pred<-predict(rf1,test.data)
+
+	misclass[i,1]<-mean(ifelse(test.data$Cardhldr==lda1.pred,0,1))
+	misclass[i,2]<-mean(ifelse(test.data$Cardhldr==logis1.pred,0,1))
+	misclass[i,3]<-mean(ifelse(test.data$Cardhldr==tr1.pred,0,1))
+	misclass[i,4]<-mean(ifelse(test.data$Cardhldr==nn1.pred,0,1))
+	misclass[i,5]<-mean(ifelse(test.data$Cardhldr==svm1.pred,0,1))
+	misclass[i,6]<-mean(ifelse(test.data$Cardhldr==rf1.pred,0,1))
+	print(i)
+}
+
+colMeans(misclass)
+boxplot(misclass)
+
+## what if we don't have Exp_inc and Avgexp
+
+credit2<-credit1[,-c(5,6)]
+
+
+p<-0.7   # proportion of training set
+n<-nrow(credit2)
+
+
+rep.n<-10  # number of repetition
+
+misclass<-matrix(rep(0,rep.n*6),ncol=6)
+for (i in 1:rep.n){
+        train.ind<-sample(n,as.integer(n*p))  #get train index randomly
+	   train.data<-credit2[train.ind,]       #get train data
+        test.data<-credit2[-train.ind,]       #get test data
+
+	lda1<-lda(Cardhldr~., data=train.data)
+	lda1.pred<-predict(lda1,test.data)$class
+	
+	logis1<-multinom(Cardhldr~., data=train.data)
+	logis1.pred<-predict(logis1,test.data)
+
+	tr1<-tree(Cardhldr~., data=train.data)
+	tr1.pred<-predict(tr1,test.data,"class")
+	
+
+	nn1<-nnet(Cardhldr~., data=train.data,size=10)
+	nn1.pred<-predict(nn1,test.data,"class")
+	
+	svm1<-svm(Cardhldr~., data=train.data)
+	svm1.pred<-predict(svm1,test.data)
+
+	rf1<-randomForest(Cardhldr~., data=train.data)
+	rf1.pred<-predict(rf1,test.data)
+
+	misclass[i,1]<-mean(ifelse(test.data$Cardhldr==lda1.pred,0,1))
+	misclass[i,2]<-mean(ifelse(test.data$Cardhldr==logis1.pred,0,1))
+	misclass[i,3]<-mean(ifelse(test.data$Cardhldr==tr1.pred,0,1))
+	misclass[i,4]<-mean(ifelse(test.data$Cardhldr==nn1.pred,0,1))
+	misclass[i,5]<-mean(ifelse(test.data$Cardhldr==svm1.pred,0,1))
+	misclass[i,6]<-mean(ifelse(test.data$Cardhldr==rf1.pred,0,1))
+	print(i)
+}
+
+colMeans(misclass)
+boxplot(misclass)
+colnames(misclass)<-c("lda","logistic","tree","nnet","svm","RF")
+boxplot(misclass)
+
+
+
+
+colMeans(misclass)
+boxplot(misclass)
+
+
+
+
+

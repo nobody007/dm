@@ -1,108 +1,321 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<!-- saved from url=(0044)http://./index.html -->
-<html><!--  Created with the CoffeeCup HTML Editor 2006  --><!--           http://www.coffeecup.com/           --><!--       Brewed on 2006-09-01 오후 5:48:39       --><head><meta http-equiv="Content-Type" content="text/html; charset=EUC-KR">
-  <title>Datamining with R</title>
-<meta name="generator" content="Namo WebEditor(Trial)">
-<style type="text/css"></style></head>
-<body bgcolor="#ffffff" text="#000000" link="#0000ff" vlink="#800080" alink="#ff0000">
-<p align="center"><font size="5">Datamining with R<br>
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Mining with R</title>
+<style>
+  :root {
+    --navy: #1a2f4b;
+    --navy-dark: #0f1d30;
+    --accent: #8a6d3b;
+    --bg: #f7f7f5;
+    --card: #ffffff;
+    --border: #e3e1db;
+    --text: #24262b;
+    --text-muted: #5c6068;
+    --radius: 6px;
+  }
 
-</font></p><p align="left"><br><br><br>Instructor : 
-<a href="mailto:josong@ewha.ac.kr">Jongwoo Song</a></p>
-<p align="left"><a href="courseinfo.html">Course information</a><br></p>
-<p align="left">&nbsp;</p>
-<p align="left">Textbook : R을 이용한 데이터마이닝<br>Reference book : &nbsp;<a href="DataMiningWithR.pdf">Datamining with 
-R</a> </p> 
+  * { box-sizing: border-box; }
 
+  body {
+    margin: 0;
+    font-family: "Georgia", "Nanum Myeongjo", "Apple SD Gothic Neo", "Malgun Gothic", serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
 
-</pre>
-<hr>
-<a href="R_RefCard_v2.pdf">R Reference Card </a><br>
-<hr>
-<p><br>R codes<br><a href="code1.txt">Code1 </a><br>
-<a href="code2.txt">Code 2 </a><br>
-<a href="code3.txt">Code 3</a><br>
-</p>
-<p><a href="chap2.r.txt">Chapter 2 Essentials</a></p>
-<p><a href="knnimputation.txt">KNN Imputation</a></p>
-<p><a href=
-"myimputation.txt">My Imputation code</a></p>
+  header.site-header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
+    color: #f2f2f0;
+    padding: 3.5rem 1.5rem 3rem;
+    text-align: center;
+    border-bottom: 4px solid var(--accent);
+  }
 
-<p><a href=
-"lm.and.tree.txt">Algae data imputation and model fitting</a></p>
-<p><a href="cat.encoding.txt">Categorical variables encoding</a></p>
-<p><a href="performance.r.txt">Performace check using CV</a></p>
-<p><a href="classification.compare.txt">Performance Comparison : Classification Methods using Iris Data</a></p>
-<p><a href="fscore.pdf">Classification f-score and ROC</a></p>
-<p><a href="credit.rwork.txt">Performance Comparison : Credit card approval data</a></p>
-<p><a href="clustering.html">Clustering</a></p>
-<p><a href="clustering_example.html">Clustering Example</a></p>
-<p><a href="classification_methods.pdf">Classification</a></p>
-<p><a href="tree_example.txt">Find the optimal TREE </a>
-</p>
-<p><a href="LogisticRegressionWithR.pdf">Logistic regression with R</a> &nbsp;&nbsp;<a href="http://./mathcat.data">Data</a> (Thanks to Prof. Jerry Brunner, University of Toronto)</p>
-<p><a href="logis.data1.txt">Logistic regression with group count data</a></p>
-<p><a href="lda.html">LDA</a></p>
-<p><a href="fscore.pdf">Classificaion f-score and ROC (Thanks to J. Kim)</a></p>
-<p><a href="svm_guide.pdf">SVM guide</a></p>
-<p><a href="svm_in_R.pdf">SVM in R</a></p>
-<p><a href="liftchart.pdf">Lift chart</a></p>
-<p><a href="http://uc-r.github.io/random_forests">Random Forest tutorial</a></p>
-<p><a href="ranger_housing.html">ranger tutorial with housing data</a></p>
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.75rem;
+    color: #c9b98a;
+    margin: 0 0 0.75rem;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
 
+  header.site-header h1 {
+    margin: 0;
+    font-size: 2.4rem;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
 
-<p><a href="gradient_boosting_reg_vs_cls.pdf">Gradient Boosting 설명</a></p>
+  header.site-header p.subtitle {
+    margin: 0.9rem 0 0;
+    color: #cfd4dc;
+    font-size: 1rem;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
 
-<p><a href="http://uc-r.github.io/gbm_regression">Gradient Boosting tutorial</a></p>
+  header.site-header p.subtitle a {
+    color: #f2f2f0;
+  }
 
-<p><a href="cali_housing_xgboost.R">XGboost example</a></p>
+  nav.top-nav {
+    margin-top: 1.75rem;
+  }
 
-<p><a href="wine_4models_comparison.R">Wine 데이터 분석</a></p>
+  nav.top-nav a {
+    display: inline-block;
+    color: #f2f2f0;
+    text-decoration: none;
+    border: 1px solid rgba(242,242,240,0.4);
+    padding: 0.55rem 1.4rem;
+    border-radius: var(--radius);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.03em;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
 
-<p><a href="adult_4models.R">Adult 데이터 분석</a></p>
+  nav.top-nav a:hover {
+    background: rgba(242,242,240,0.12);
+    border-color: #c9b98a;
+  }
 
+  main {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+  }
 
+  section.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.75rem 2rem;
+    margin-bottom: 1.75rem;
+    box-shadow: 0 1px 3px rgba(15, 29, 48, 0.04);
+  }
 
+  section.card h2 {
+    margin: 0 0 0.3rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--navy);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
 
-<p><a href="pdp.pdf">Partial Dependence Plot (pdp)</a></p>
-<p><a href="pdpexample1.txt">Partial Dependence Plot example(pdp)</a></p>
-<p><a href="svmclass.txt">SVM classification example</a></p>
-<p><a href="svm.regression.txt">SVM regression R code</a></p>
-<p><a href="cat_var_trt.pdf">예측모형에서 범주형 변수 처리</a></p>
-<p><a href="vtreat.txt">vtreat example</a></p>
+  section.card p.section-note {
+    margin: 0 0 1.1rem;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
 
-<p><a href="http://home.ewha.ac.kr/~josong/dmgrad/dl1.pdf">Deep Learning 1 (Thanks to Lee, H.)</a></p>
-<p><a href="http://home.ewha.ac.kr/~josong/dmgrad/dl2.pdf">Deep Learning 2 (Thanks to Lee, H.)</a></p>
-<p><a href="https://blog.rstudio.com/2017/09/05/keras-for-r/">Keras for R</a></p>
-<p><a href="https://www.datacamp.com/community/tutorials/support-vector-machines-r">SVM 설명 1 </a></p>
-<p><a href="http://uc-r.github.io/svm">SVM 설명 2 </a></p>
-<hr>
+  section.card p.section-note a {
+    color: var(--accent);
+  }
 
-<p><br>Sample Data<br>
-</p>
-<p><a href="co2data.txt">co2data</a><a href="http://./Analysis.txt"> </a></p>
-<p><a href="Analysis.txt">Case 1 Study Training Data </a> <br>
-<a href="Eval.txt"> Case 1 Study Test Data </a> <br>
-<a href="Sols.txt"> Case 1 Study Test Data - algae frequencies</a></p>
-<p><a href="stocks.txt">Case2 data (stock data)</a><br>
-</p>
-<p><a href="credit.csv">Credit card approval data</a></p>
-<p><a href="bank.csv">Bank data</a></p>
-</p>
-<p><a href="bank-names.txt">Bank data 설명</a></p>
+  ul.resource-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
 
-<hr>
+  ul.resource-list li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+  }
 
-<p><br>
-<a href="http://bibs.snu.ac.kr/R/">CRAN Korean Website</a></p>
-<p>&nbsp;</p>
+  ul.resource-list li:last-child {
+    border-bottom: none;
+  }
 
+  .badge {
+    flex: none;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: var(--navy);
+    background: #eef1f5;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.18rem 0.42rem;
+    min-width: 2.4rem;
+    text-align: center;
+    align-self: flex-start;
+    margin-top: 0.12rem;
+  }
 
-<p>&nbsp;</p>
-<p>&nbsp;</p>
-<big><big> <font color="red"> </font></big></big>
+  ul.resource-list a {
+    color: var(--text);
+    text-decoration: none;
+    font-size: 1rem;
+  }
 
+  ul.resource-list a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
 
+  ul.resource-list .aux-link {
+    font-size: 0.88rem;
+    color: var(--accent);
+  }
 
+  ul.resource-list .note {
+    display: block;
+    width: 100%;
+    margin-top: 0.15rem;
+    margin-left: calc(2.4rem + 0.6rem);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
 
-</body></html>
+  footer {
+    text-align: center;
+    padding: 2rem 1.5rem 3rem;
+    color: var(--text-muted);
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 0.85rem;
+  }
+
+  footer a {
+    color: var(--navy);
+  }
+
+  @media (max-width: 600px) {
+    header.site-header h1 { font-size: 1.9rem; }
+    section.card { padding: 1.4rem 1.3rem; }
+    ul.resource-list .note { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <p class="eyebrow">Undergraduate Course</p>
+  <h1>Data Mining with R</h1>
+  <p class="subtitle">Instructor: <a href="mailto:josong@ewha.ac.kr">Jongwoo Song</a> &nbsp;·&nbsp; Data Visualization · CART · Clustering · Classification · Ensemble Methods</p>
+  <nav class="top-nav">
+    <a href="courseinfo.html">Course Information</a>
+  </nav>
+</header>
+
+<main>
+
+  <section class="card" id="materials">
+    <h2>Course Materials</h2>
+    <p class="section-note">Textbook: R을 이용한 데이터마이닝 &nbsp;·&nbsp; Reference: <a href="DataMiningWithR.pdf">Datamining with R</a></p>
+    <ul class="resource-list">
+      <li><span class="badge">PDF</span><a href="R_RefCard_v2.pdf">R Reference Card</a></li>
+    </ul>
+  </section>
+
+  <section class="card" id="rcode">
+    <h2>R Code &amp; Examples</h2>
+    <ul class="resource-list">
+      <li><span class="badge">TXT</span><a href="code1.txt">Code 1</a></li>
+      <li><span class="badge">TXT</span><a href="code2.txt">Code 2</a></li>
+      <li><span class="badge">TXT</span><a href="code3.txt">Code 3</a></li>
+      <li><span class="badge">TXT</span><a href="chap2.r.txt">Chapter 2 Essentials</a></li>
+      <li><span class="badge">TXT</span><a href="knnimputation.txt">KNN Imputation</a></li>
+      <li><span class="badge">TXT</span><a href="myimputation.txt">My Imputation Code</a></li>
+      <li><span class="badge">TXT</span><a href="lm.and.tree.txt">Algae Data Imputation and Model Fitting</a></li>
+      <li><span class="badge">TXT</span><a href="cat.encoding.txt">Categorical Variables Encoding</a></li>
+      <li><span class="badge">TXT</span><a href="performance.r.txt">Performance Check Using CV</a></li>
+      <li><span class="badge">TXT</span><a href="classification.compare.txt">Performance Comparison: Classification Methods Using Iris Data</a></li>
+      <li>
+        <span class="badge">PDF</span><a href="fscore.pdf">Classification F-score and ROC</a>
+        <span class="note">Thanks to J. Kim</span>
+      </li>
+      <li><span class="badge">TXT</span><a href="credit.rwork.txt">Performance Comparison: Credit Card Approval Data</a></li>
+      <li><span class="badge">TXT</span><a href="tree_example.txt">Find the Optimal Tree</a></li>
+    </ul>
+  </section>
+
+  <section class="card" id="classification">
+    <h2>Classification &amp; Clustering</h2>
+    <ul class="resource-list">
+      <li><span class="badge">HTML</span><a href="clustering.html">Clustering</a></li>
+      <li><span class="badge">HTML</span><a href="clustering_example.html">Clustering Example</a></li>
+      <li><span class="badge">PDF</span><a href="classification_methods.pdf">Classification</a></li>
+      <li>
+        <span class="badge">PDF</span><a href="LogisticRegressionWithR.pdf">Logistic Regression with R</a>
+        <span class="aux-link">(<a href="mathcat.data">Data</a>)</span>
+        <span class="note">Thanks to Prof. Jerry Brunner, University of Toronto</span>
+      </li>
+      <li><span class="badge">TXT</span><a href="logis.data1.txt">Logistic Regression with Group Count Data</a></li>
+      <li><span class="badge">HTML</span><a href="lda.html">LDA</a></li>
+      <li><span class="badge">PDF</span><a href="svm_guide.pdf">SVM Guide</a></li>
+      <li><span class="badge">PDF</span><a href="liftchart.pdf">Lift Chart</a></li>
+      <li><span class="badge">TXT</span><a href="svmclass.txt">SVM Classification Example</a></li>
+      <li><span class="badge">TXT</span><a href="svm.regression.txt">SVM Regression R Code</a></li>
+      <li><span class="badge">LINK</span><a href="https://www.datacamp.com/community/tutorials/support-vector-machines-r">SVM 설명 1</a></li>
+      <li><span class="badge">LINK</span><a href="http://uc-r.github.io/svm">SVM 설명 2</a></li>
+    </ul>
+  </section>
+
+  <section class="card" id="ensemble">
+    <h2>Ensemble Methods &amp; Deep Learning</h2>
+    <ul class="resource-list">
+      <li><span class="badge">LINK</span><a href="http://uc-r.github.io/random_forests">Random Forest Tutorial</a></li>
+      <li><span class="badge">HTML</span><a href="ranger_housing.html">ranger Tutorial with Housing Data</a></li>
+      <li><span class="badge">PDF</span><a href="gradient_boosting_reg_vs_cls.pdf">Gradient Boosting 설명</a></li>
+      <li><span class="badge">LINK</span><a href="http://uc-r.github.io/gbm_regression">Gradient Boosting Tutorial</a></li>
+      <li><span class="badge">R</span><a href="cali_housing_xgboost.R">XGBoost Example</a></li>
+      <li><span class="badge">R</span><a href="wine_4models_comparison.R">Wine 데이터 분석</a></li>
+      <li><span class="badge">R</span><a href="adult_4models.R">Adult 데이터 분석</a></li>
+      <li><span class="badge">PDF</span><a href="pdp.pdf">Partial Dependence Plot (pdp)</a></li>
+      <li><span class="badge">TXT</span><a href="pdpexample1.txt">Partial Dependence Plot Example (pdp)</a></li>
+      <li><span class="badge">PDF</span><a href="cat_var_trt.pdf">예측모형에서 범주형 변수 처리</a></li>
+      <li><span class="badge">TXT</span><a href="vtreat.txt">vtreat Example</a></li>
+      <li>
+        <span class="badge">PDF</span><a href="https://nobody007.github.io/dmgrad/dl1.pdf">Deep Learning 1</a>
+        <span class="note">Thanks to Lee, H.</span>
+      </li>
+      <li>
+        <span class="badge">PDF</span><a href="https://nobody007.github.io/dmgrad/dl2.pdf">Deep Learning 2</a>
+        <span class="note">Thanks to Lee, H.</span>
+      </li>
+      <li><span class="badge">LINK</span><a href="https://blog.rstudio.com/2017/09/05/keras-for-r/">Keras for R</a></li>
+    </ul>
+  </section>
+
+  <section class="card" id="sampledata">
+    <h2>Sample Data</h2>
+    <ul class="resource-list">
+      <li><span class="badge">TXT</span><a href="co2data.txt">co2data</a></li>
+      <li><span class="badge">TXT</span><a href="Analysis.txt">Case 1 Study Training Data</a></li>
+      <li><span class="badge">TXT</span><a href="Eval.txt">Case 1 Study Test Data</a></li>
+      <li><span class="badge">TXT</span><a href="Sols.txt">Case 1 Study Test Data — Algae Frequencies</a></li>
+      <li><span class="badge">TXT</span><a href="stocks.txt">Case 2 Data (Stock Data)</a></li>
+      <li><span class="badge">CSV</span><a href="credit.csv">Credit Card Approval Data</a></li>
+      <li><span class="badge">CSV</span><a href="bank.csv">Bank Data</a></li>
+      <li><span class="badge">TXT</span><a href="bank-names.txt">Bank Data 설명</a></li>
+    </ul>
+  </section>
+
+  <section class="card" id="external">
+    <h2>External Resources</h2>
+    <ul class="resource-list">
+      <li><span class="badge">LINK</span><a href="http://bibs.snu.ac.kr/R/">CRAN Korean Website</a></li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  <p>Data Mining with R &middot; <a href="courseinfo.html">Course Information</a></p>
+</footer>
+
+</body>
+</html>

@@ -22,3 +22,82 @@ myimputation<-function(x,k=10){
 
 	return(x)
 }
+
+######### New 이해하기 쉬운 버전 #########
+
+## myimputation(): KNN(최근접 이웃) 기반 결측치(NA) 대체 함수
+## ------------------------------------------------------------
+##   x : 결측치가 있는 데이터프레임 (수치형 + 범주형 변수 혼합 가능)
+##   k : 대체값을 계산할 때 사용할 최근접 이웃의 수 (기본값 10)
+##
+##   아이디어 (3단계):
+##   1) 모든 관측치(행) 사이의 거리를 daisy()로 한 번에 계산해 둔다
+##   2) 결측치가 있는 행마다, 가장 가까운 k개의 이웃을 찾는다
+##   3) 그 이웃들의 값으로 대표값(중앙값 또는 최빈값)을 구해 결측치를 채운다
+## ------------------------------------------------------------
+
+myimputation <- function(x, k = 10) {
+
+  ## 한 변수(컬럼)의 "대표값"을 구하는 도우미 함수
+  ##   - 숫자형이면 중앙값(median)
+  ##   - 범주형(factor 또는 문자형)이면 최빈값(mode, 가장 많이 나온 값)
+  central.value <- function(v) {
+    if (is.numeric(v)) {
+      median(v, na.rm = TRUE)
+    } else {
+      f <- if (is.factor(v)) v else as.factor(v)
+      levels(f)[which.max(table(f))]
+    }
+  }
+
+  library(cluster)
+
+  ## 1) 모든 행 사이의 거리행렬 계산 (daisy는 수치형+범주형이 섞여 있어도 계산 가능)
+  dist.mtx <- as.matrix(daisy(x, stand = TRUE))
+
+  ## 2) 결측치가 하나라도 있는 행 번호들
+  incomplete.rows <- which(!complete.cases(x))
+
+  ## 3) 결측치가 있는 행을 하나씩 처리
+  for (r in incomplete.rows) {
+
+    ## (a) r번째 행에서 다른 모든 행까지의 거리를 "가까운 순"으로 정렬한
+    ##     행 번호(위치) 벡터. 맨 앞은 항상 자기 자신(거리 0)이므로
+    ##     2번째 ~ (k+1)번째까지를 최근접 이웃(nn)으로 사용한다.
+    ## 이전 코드와의 차이점은 order 함수를 이용해서 중간에 행번호가 비더라도 정확한 행(관측치)를 가져옴
+	order.by.distance <- order(dist.mtx[r, ])
+    nn <- order.by.distance[2:(k + 1)]
+
+    ## (b) r번째 행에서 결측치가 있는 열(변수) 번호
+    na.cols <- which(is.na(x[r, ]))
+
+    ## (c) k개의 이웃이 그 열들에 대해 가진 값을 모아 대표값을 계산하고,
+    ##     r번째 행의 결측치 자리에 채워 넣는다
+    neighbor.values <- x[nn, na.cols, drop = FALSE]
+    x[r, na.cols] <- sapply(neighbor.values, central.value)  # sapply를 쓰는 이유는 타입관련 함정 피할 수 있음
+  }
+
+  return(x)
+}
+
+## ------------------------------------------------------------
+## 사용 예시
+## ------------------------------------------------------------
+# algae <- read.table('Analysis.txt', header = FALSE, dec = '.',
+#                      col.names = c('season','size','speed','mxPH','mnO2','Cl',
+#                                     'NO3','NH4','oPO4','PO4','Chla',
+#                                     'a1','a2','a3','a4','a5','a6','a7'),
+#                      na.strings = c('XXXXXXX'))
+# algae$season <- as.factor(algae$season)
+# algae$size   <- as.factor(algae$size)
+# algae$speed  <- as.factor(algae$speed)
+#
+# algae.x <- myimputation(algae[, 1:11], 10)
+# anyNA(algae.x)   # FALSE 이면 결측치가 모두 채워진 것
+
+
+##df <- data.frame(num = c(10,20,30), grp = factor(c("a","b","a")))
+##apply(df, 2, class)   #        num         grp 
+                      # "character" "character"   ← 둘 다 문자로 바뀜!
+##sapply(df, class)     #      num       grp 
+                      #  "numeric"  "factor"       ← 원래 타입 유지

@@ -1,3 +1,53 @@
+### knn imputation function #####################################
+
+myimputation <- function(x, k = 10) {
+
+  ## 한 변수(컬럼)의 "대표값"을 구하는 도우미 함수
+  ##   - 숫자형이면 중앙값(median)
+  ##   - 범주형(factor 또는 문자형)이면 최빈값(mode, 가장 많이 나온 값)
+  central.value <- function(v) {
+    if (is.numeric(v)) {
+      median(v, na.rm = TRUE)
+    } else {
+      f <- if (is.factor(v)) v else as.factor(v)
+      levels(f)[which.max(table(f))]
+    }
+  }
+
+  library(cluster)
+
+  ## 1) 모든 행 사이의 거리행렬 계산 (daisy는 수치형+범주형이 섞여 있어도 계산 가능)
+  dist.mtx <- as.matrix(daisy(x, stand = TRUE))
+
+  ## 2) 결측치가 하나라도 있는 행 번호들
+  incomplete.rows <- which(!complete.cases(x))
+
+  ## 3) 결측치가 있는 행을 하나씩 처리
+  for (r in incomplete.rows) {
+
+    ## (a) r번째 행에서 다른 모든 행까지의 거리를 "가까운 순"으로 정렬한
+    ##     행 번호(위치) 벡터. 맨 앞은 항상 자기 자신(거리 0)이므로
+    ##     2번째 ~ (k+1)번째까지를 최근접 이웃(nn)으로 사용한다.
+    ## 이전 코드와의 차이점은 order 함수를 이용해서 중간에 행번호가 비더라도 정확한 행(관측치)를 가져옴
+	order.by.distance <- order(dist.mtx[r, ])
+    nn <- order.by.distance[2:(k + 1)]
+
+    ## (b) r번째 행에서 결측치가 있는 열(변수) 번호
+    na.cols <- which(is.na(x[r, ]))
+
+    ## (c) k개의 이웃이 그 열들에 대해 가진 값을 모아 대표값을 계산하고,
+    ##     r번째 행의 결측치 자리에 채워 넣는다
+    neighbor.values <- x[nn, na.cols, drop = FALSE]
+    x[r, na.cols] <- sapply(neighbor.values, central.value)  # sapply를 쓰는 이유는 타입관련 함정 피할 수 있음
+  }
+
+  return(x)
+}
+
+
+
+
+
 algae <- read.table('Analysis.txt',
              header=F,
              dec='.',
@@ -59,7 +109,32 @@ tr1.nmse<-tr1.mse/mse.den
 lm1.nmse
 tr1.nmse
 
+### randomForest
+install.packages('randomForest')
+library(randomForest)
+rf1<-randomForest(a1~., data=algae1)
+rf1
+plot(rf1)
+importance(rf1)
+varImpPlot(rf1)
 
+rf1.pred<-predict(rf1,algae1)
+plot(algae1$a1,rf1.pred)
+abline(0,1,col=2)
+rf1.mse<-mean((algae1$a1-rf1.pred)^2)
+rf1.mse
+sqrt(rf1.mse)
+
+##tuning RF
+result<-tuneRF(algae1[,1:11],algae1$a1, ntreeTry=500,
+			stepFactor=1.5, improve=0.01, plot=True, doBest=True)
+print(result)
+
+#패키지	        파라미터	         제한하는 대상	기본값
+#randomForest	nodesize	Terminal node 크기의 하한을 정하는 분할 중단 기준	분류 1, 회귀 5
+#randomForest	maxnodes	Tree 전체의 terminal node 개수 상한	제한 없음
+#tree	        minsize     분할하려는 부모 노드의 최소 크기	10
+#tree	        mincut      분할 결과 생성되는 각 자식 노드의 최소 크기	5
 
 
 
